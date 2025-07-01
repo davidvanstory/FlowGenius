@@ -10,6 +10,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { AppState, createInitialAppState, ChatMessage, IdeaEntity } from './types/AppState';
 import { logger } from './utils/logger';
 import Sidebar from './components/Sidebar';
+import Chat from './components/Chat';
+import InputBar from './components/InputBar';
 import './App.css';
 
 /**
@@ -64,8 +66,10 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   // Loading states for different operations
-  const [isLoading, setIsLoading] = useState(false);
   const [isSessionLoading, setIsSessionLoading] = useState(false);
+
+  // Input state for the message input bar
+  const [inputValue, setInputValue] = useState('');
 
   // Mock sessions data - will be replaced with real database data
   const [sessions, setSessions] = useState<IdeaEntity[]>(() => createMockSessions(sessionId));
@@ -251,6 +255,96 @@ function App() {
     logger.info('✅ Session renamed successfully', { sessionId, newTitle });
   }, [appState.idea_id, updateAppState]);
 
+  /**
+   * Handles input value changes in the InputBar
+   * @param value - The new input value
+   */
+  const handleInputChange = useCallback((value: string) => {
+    logger.debug('✏️ Input value changed', { 
+      length: value.length,
+      hasContent: value.trim().length > 0
+    });
+    setInputValue(value);
+  }, []);
+
+  /**
+   * Handles sending a message from the InputBar
+   * @param message - The message content to send
+   */
+  const handleSendMessage = useCallback((message: string) => {
+    if (!message.trim() || appState.is_processing) {
+      logger.debug('🚫 Message send blocked', { 
+        hasContent: !!message.trim(),
+        isProcessing: appState.is_processing
+      });
+      return;
+    }
+
+    logger.info('📤 Sending user message', { 
+      messageLength: message.length,
+      currentStage: appState.current_stage,
+      sessionId: appState.idea_id
+    });
+
+    // Add user message to conversation
+    addMessage({
+      role: 'user',
+      content: message
+    });
+
+    // Clear input
+    setInputValue('');
+
+    // Set processing state
+    updateAppState({ 
+      is_processing: true,
+      last_user_action: 'chat'
+    });
+
+    // TODO: Integrate with LangGraph workflow in task 3.0
+    // For now, simulate a response
+    setTimeout(() => {
+      const responses = [
+        "I understand you're working on this idea. Let me help you develop it further.",
+        "That's an interesting perspective. Can you tell me more about the specific problem you're trying to solve?",
+        "I can see the potential in this concept. What would you say is the most important feature to focus on first?",
+        "Let's break this down into smaller, actionable components. What's the core value proposition here?"
+      ];
+      
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)] || "I understand you're working on this idea. Let me help you develop it further.";
+      
+      addMessage({
+        role: 'assistant',
+        content: randomResponse
+      });
+
+      updateAppState({ is_processing: false });
+      
+      logger.info('🤖 Assistant response generated', { 
+        responseLength: randomResponse.length,
+        sessionId: appState.idea_id
+      });
+    }, 1500);
+  }, [appState.is_processing, appState.current_stage, appState.idea_id, addMessage, updateAppState]);
+
+  /**
+   * Handles voice recording requests from the InputBar
+   * TODO: Implement in task 5.0 with Whisper API integration
+   */
+  const handleVoiceRecord = useCallback(() => {
+    logger.info('🎤 Voice recording requested (not yet implemented)');
+    // TODO: Implement voice recording functionality
+  }, []);
+
+  /**
+   * Handles file upload requests from the InputBar
+   * TODO: Implement file upload functionality in future tasks
+   */
+  const handleFileUpload = useCallback(() => {
+    logger.info('📎 File upload requested (not yet implemented)');
+    // TODO: Implement file upload functionality
+  }, []);
+
   // Log app initialization
   useEffect(() => {
     logger.info('🚀 FlowGenius App component mounted', {
@@ -280,15 +374,6 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Loading overlay */}
-      {isLoading && (
-        <div className="loading-overlay">
-          <div className="loading-spinner">
-            <div className="spinner"></div>
-            <p>Processing...</p>
-          </div>
-        </div>
-      )}
 
       {/* Mobile header with hamburger menu */}
       <div className="mobile-header">
@@ -337,73 +422,32 @@ function App() {
 
           {/* Chat messages area */}
           <div className="chat-content">
-            {/* Chat component will be implemented in task 2.3 */}
-            {appState.messages.length === 0 ? (
-              <div className="welcome-message">
-                <h2>Welcome to FlowGenius</h2>
-                <p>Start a conversation to begin developing your ideas through our AI-powered workflow.</p>
-                <div className="workflow-stages">
-                  <div className="stage-item">
-                    <span className="stage-number">1</span>
-                    <span className="stage-name">Brainstorm</span>
-                  </div>
-                  <div className="stage-arrow">→</div>
-                  <div className="stage-item">
-                    <span className="stage-number">2</span>
-                    <span className="stage-name">Summary</span>
-                  </div>
-                  <div className="stage-arrow">→</div>
-                  <div className="stage-item">
-                    <span className="stage-number">3</span>
-                    <span className="stage-name">PRD</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="messages-container">
-                {appState.messages.map((message, index) => (
-                  <div 
-                    key={index} 
-                    className={`message ${message.role}`}
-                  >
-                    <div className="message-content">
-                      <div className="message-avatar">
-                        {message.role === 'user' ? 'U' : 'AI'}
-                      </div>
-                      <div className="message-text">
-                        {message.content}
-                      </div>
-                    </div>
-                    <div className="message-meta">
-                      <span className="message-time">
-                        {message.created_at?.toLocaleTimeString()}
-                      </span>
-                      <span className="message-stage">
-                        {message.stage_at_creation}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <Chat
+              messages={appState.messages}
+              currentStage={appState.current_stage}
+              isProcessing={appState.is_processing}
+              autoScroll={true}
+              onMessageAction={(action, messageIndex) => {
+                logger.info('🎯 Chat message action triggered', { action, messageIndex });
+                // TODO: Implement message actions (copy, regenerate, etc.)
+              }}
+            />
           </div>
 
           {/* Input area */}
           <div className="chat-input-area">
-            {/* InputBar component will be implemented in task 2.4 */}
-            <div className="input-placeholder">
-              <input 
-                type="text" 
-                placeholder="Type your message here..."
-                className="temp-input"
-                disabled
-              />
-              <button className="temp-mic-button" disabled>🎤</button>
-              <button className="temp-send-button" disabled>Send</button>
-            </div>
-            <p className="input-disclaimer">
-              This is a placeholder. Input functionality will be implemented in the next task.
-            </p>
+            <InputBar
+              value={inputValue}
+              onChange={handleInputChange}
+              onSend={handleSendMessage}
+              onVoiceRecord={handleVoiceRecord}
+              onFileUpload={handleFileUpload}
+              isProcessing={appState.is_processing}
+              isVoiceEnabled={true} // Temporarily enabled to show the button
+              isUploadEnabled={true} // Temporarily enabled to show the button
+              placeholder="Message FlowGenius..."
+              disabled={appState.is_processing}
+            />
           </div>
         </main>
       </div>

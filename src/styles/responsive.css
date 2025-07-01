@@ -1,0 +1,619 @@
+/**
+ * FlowGenius Responsive Design for Desktop
+ * 
+ * Desktop-focused responsive design for Electron app window resizing.
+ * Handles various desktop window sizes from small (800px) to ultra-wide (2560px+).
+ * 
+ * Desktop Window Size Categories:
+ * - Compact Desktop: 800px - 1024px (small laptop screens)
+ * - Standard Desktop: 1025px - 1440px (most common desktop sizes)
+ * - Large Desktop: 1441px - 1920px (full HD and larger monitors)
+ * - Ultra-wide Desktop: 1921px+ (ultra-wide monitors and multi-monitor setups)
+ */
+
+/* ===== DESKTOP BREAKPOINT SYSTEM ===== */
+
+:root {
+  /* Desktop-specific breakpoints */
+  --desktop-compact: 800px;      /* Minimum viable desktop size */
+  --desktop-standard: 1025px;    /* Standard desktop */
+  --desktop-large: 1441px;       /* Large desktop monitors */
+  --desktop-ultrawide: 1921px;   /* Ultra-wide monitors */
+  
+  /* Responsive sidebar widths */
+  --sidebar-width-compact: 200px;
+  --sidebar-width-standard: 260px;
+  --sidebar-width-large: 300px;
+  
+  /* Responsive content widths */
+  --content-max-width-compact: 600px;
+  --content-max-width-standard: 768px;
+  --content-max-width-large: 900px;
+  --content-max-width-ultrawide: 1200px;
+  
+  /* Responsive spacing */
+  --spacing-responsive-sm: var(--spacing-2);
+  --spacing-responsive-md: var(--spacing-4);
+  --spacing-responsive-lg: var(--spacing-6);
+}
+
+/* ===== COMPACT DESKTOP (800px - 1024px) ===== */
+/* Small laptop screens, minimum viable desktop size */
+
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: var(--sidebar-width-compact);
+    --max-content-width: var(--content-max-width-compact);
+    --spacing-responsive: var(--spacing-responsive-sm);
+  }
+  
+  /* App Layout Adjustments */
+  .app-container {
+    font-size: 0.95rem; /* Slightly smaller text for compact screens */
+  }
+  
+  /* Sidebar Adjustments */
+  .sidebar {
+    width: var(--sidebar-width-compact) !important;
+    min-width: var(--sidebar-width-compact);
+  }
+  
+  .sidebar-content {
+    padding: var(--spacing-3);
+  }
+  
+  .sidebar-header {
+    padding: var(--spacing-3) var(--spacing-3) var(--spacing-4);
+  }
+  
+  .sidebar-title {
+    font-size: var(--font-size-lg);
+  }
+  
+  .new-session-button {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-sm);
+  }
+  
+  /* Session List Adjustments */
+  .session-item {
+    padding: var(--spacing-2) var(--spacing-3);
+    margin-bottom: var(--spacing-1);
+  }
+  
+  .session-title {
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-tight);
+  }
+  
+  .session-meta {
+    font-size: var(--font-size-xs);
+    margin-top: var(--spacing-1);
+  }
+  
+  /* Chat Area Adjustments */
+  .chat-main {
+    margin-left: var(--sidebar-width-compact);
+  }
+  
+  .chat-header {
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+  
+  .chat-content {
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+  
+  /* Message Adjustments */
+  .messages-container {
+    max-width: var(--content-max-width-compact);
+    padding: 0 var(--spacing-2);
+  }
+  
+  .message {
+    margin-bottom: var(--spacing-3);
+  }
+  
+  .message-content {
+    padding: var(--spacing-3);
+  }
+  
+  .message-text {
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-normal);
+  }
+  
+  /* Input Bar Adjustments */
+  .chat-input-area {
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+  
+  .input-bar {
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+  
+  .input-textarea {
+    font-size: var(--font-size-sm);
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+  
+  .input-action-button {
+    width: 2rem;
+    height: 2rem;
+    padding: var(--spacing-1);
+  }
+  
+  /* Welcome Message Adjustments */
+  .welcome-message {
+    padding: var(--spacing-4);
+    margin: var(--spacing-4) auto;
+  }
+  
+  .welcome-message h2 {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-3);
+  }
+  
+  .welcome-message p {
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-3);
+  }
+  
+  /* Workflow Stages Adjustments */
+  .workflow-stages {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+  
+  .stage-item {
+    padding: var(--spacing-2);
+    font-size: var(--font-size-xs);
+  }
+  
+  .stage-arrow {
+    display: none; /* Hide arrows in compact layout */
+  }
+}
+
+/* ===== STANDARD DESKTOP (1025px - 1440px) ===== */
+/* Most common desktop sizes, optimal layout */
+
+@media (min-width: 1025px) and (max-width: 1440px) {
+  :root {
+    --sidebar-width: var(--sidebar-width-standard);
+    --max-content-width: var(--content-max-width-standard);
+    --spacing-responsive: var(--spacing-responsive-md);
+  }
+  
+  /* Standard desktop - use default styles from globals.css */
+  /* This is our baseline, so minimal overrides needed */
+  
+  .chat-main {
+    margin-left: var(--sidebar-width-standard);
+  }
+  
+  .messages-container {
+    max-width: var(--content-max-width-standard);
+  }
+  
+  /* Ensure proper spacing for standard desktop */
+  .chat-content {
+    padding: var(--spacing-4) var(--spacing-6);
+  }
+  
+  .chat-input-area {
+    padding: var(--spacing-4) var(--spacing-6);
+  }
+}
+
+/* ===== LARGE DESKTOP (1441px - 1920px) ===== */
+/* Large monitors, more spacious layout */
+
+@media (min-width: 1441px) and (max-width: 1920px) {
+  :root {
+    --sidebar-width: var(--sidebar-width-large);
+    --max-content-width: var(--content-max-width-large);
+    --spacing-responsive: var(--spacing-responsive-lg);
+  }
+  
+  /* Sidebar Enhancements */
+  .sidebar {
+    width: var(--sidebar-width-large) !important;
+    min-width: var(--sidebar-width-large);
+  }
+  
+  .sidebar-content {
+    padding: var(--spacing-6);
+  }
+  
+  .sidebar-header {
+    padding: var(--spacing-6) var(--spacing-6) var(--spacing-8);
+  }
+  
+  .sidebar-title {
+    font-size: var(--font-size-xl);
+  }
+  
+  .new-session-button {
+    padding: var(--spacing-3) var(--spacing-5);
+    font-size: var(--font-size-base);
+  }
+  
+  /* Session List Enhancements */
+  .session-item {
+    padding: var(--spacing-4) var(--spacing-5);
+    margin-bottom: var(--spacing-2);
+    border-radius: var(--radius-lg);
+  }
+  
+  .session-title {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+  }
+  
+  .session-meta {
+    font-size: var(--font-size-sm);
+    margin-top: var(--spacing-2);
+  }
+  
+  /* Chat Area Enhancements */
+  .chat-main {
+    margin-left: var(--sidebar-width-large);
+  }
+  
+  .chat-header {
+    padding: var(--spacing-5) var(--spacing-8);
+  }
+  
+  .chat-content {
+    padding: var(--spacing-6) var(--spacing-8);
+  }
+  
+  /* Message Enhancements */
+  .messages-container {
+    max-width: var(--content-max-width-large);
+    padding: 0 var(--spacing-4);
+  }
+  
+  .message {
+    margin-bottom: var(--spacing-6);
+  }
+  
+  .message-content {
+    padding: var(--spacing-5);
+    border-radius: var(--radius-xl);
+  }
+  
+  .message-text {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-relaxed);
+  }
+  
+  /* Input Bar Enhancements */
+  .chat-input-area {
+    padding: var(--spacing-6) var(--spacing-8);
+  }
+  
+  .input-bar {
+    padding: var(--spacing-4) var(--spacing-5);
+    border-radius: var(--radius-xl);
+  }
+  
+  .input-textarea {
+    font-size: var(--font-size-base);
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+  
+  .input-action-button {
+    width: 3rem;
+    height: 3rem;
+    padding: var(--spacing-3);
+  }
+  
+  /* Welcome Message Enhancements */
+  .welcome-message {
+    padding: var(--spacing-8);
+    margin: var(--spacing-8) auto;
+  }
+  
+  .welcome-message h2 {
+    font-size: var(--font-size-3xl);
+    margin-bottom: var(--spacing-6);
+  }
+  
+  .welcome-message p {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-4);
+  }
+}
+
+/* ===== ULTRA-WIDE DESKTOP (1921px+) ===== */
+/* Ultra-wide monitors, maximum spacious layout */
+
+@media (min-width: 1921px) {
+  :root {
+    --sidebar-width: var(--sidebar-width-large);
+    --max-content-width: var(--content-max-width-ultrawide);
+    --spacing-responsive: var(--spacing-responsive-lg);
+  }
+  
+  /* Ultra-wide specific adjustments */
+  .messages-container {
+    max-width: var(--content-max-width-ultrawide);
+    padding: 0 var(--spacing-8);
+  }
+  
+  /* Larger text and spacing for ultra-wide screens */
+  .message-text {
+    font-size: var(--font-size-lg);
+    line-height: var(--line-height-relaxed);
+  }
+  
+  .input-textarea {
+    font-size: var(--font-size-lg);
+    padding: var(--spacing-4) var(--spacing-6);
+  }
+  
+  /* Enhanced welcome message for ultra-wide */
+  .welcome-message {
+    max-width: 800px; /* Prevent text from becoming too wide */
+    padding: var(--spacing-12);
+  }
+  
+  .welcome-message h2 {
+    font-size: var(--font-size-4xl);
+  }
+  
+  .welcome-message p {
+    font-size: var(--font-size-xl);
+  }
+  
+  /* Workflow stages in a more spacious layout */
+  .workflow-stages {
+    gap: var(--spacing-8);
+  }
+  
+  .stage-item {
+    padding: var(--spacing-5) var(--spacing-6);
+    font-size: var(--font-size-base);
+  }
+}
+
+/* ===== WINDOW HEIGHT RESPONSIVE ADJUSTMENTS ===== */
+
+/* Short windows (less than 600px height) */
+@media (max-height: 600px) {
+  .sidebar-header {
+    padding-top: var(--spacing-3);
+    padding-bottom: var(--spacing-3);
+  }
+  
+  .chat-header {
+    padding-top: var(--spacing-3);
+    padding-bottom: var(--spacing-3);
+  }
+  
+  .welcome-message {
+    margin: var(--spacing-4) auto;
+    padding: var(--spacing-4);
+  }
+  
+  .welcome-message h2 {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-3);
+  }
+  
+  .message {
+    margin-bottom: var(--spacing-3);
+  }
+  
+  .workflow-stages {
+    gap: var(--spacing-2);
+  }
+  
+  .stage-item {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* Tall windows (more than 1200px height) */
+@media (min-height: 1200px) {
+  .welcome-message {
+    margin: var(--spacing-16) auto;
+    padding: var(--spacing-12);
+  }
+  
+  .message {
+    margin-bottom: var(--spacing-8);
+  }
+  
+  .chat-content {
+    padding-top: var(--spacing-8);
+    padding-bottom: var(--spacing-8);
+  }
+}
+
+/* ===== SIDEBAR RESPONSIVE BEHAVIOR ===== */
+
+/* Collapsible sidebar for very narrow windows */
+@media (max-width: 900px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--transition-base);
+    z-index: var(--z-index-modal);
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-xl);
+  }
+  
+  .chat-main {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+  
+  /* Add overlay when sidebar is open */
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-bg-overlay);
+    z-index: calc(var(--z-index-modal) - 1);
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--transition-base);
+  }
+  
+  .sidebar-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  /* Show hamburger menu button */
+  .mobile-header {
+    display: flex !important;
+  }
+}
+
+/* ===== CONTENT SCALING UTILITIES ===== */
+
+/* Prevent content from becoming too narrow */
+.chat-content,
+.messages-container {
+  min-width: 300px; /* Absolute minimum width */
+}
+
+/* Prevent text from becoming too wide on ultra-wide screens */
+.message-text,
+.welcome-message p {
+  max-width: 65ch; /* Optimal reading width */
+}
+
+/* ===== RESPONSIVE TYPOGRAPHY SCALING ===== */
+
+/* Scale typography based on window width */
+@media (min-width: 1600px) {
+  html {
+    font-size: 17px; /* Slightly larger base font size for large screens */
+  }
+}
+
+@media (min-width: 2000px) {
+  html {
+    font-size: 18px; /* Even larger for ultra-wide screens */
+  }
+}
+
+@media (max-width: 900px) {
+  html {
+    font-size: 15px; /* Smaller base font size for compact screens */
+  }
+}
+
+/* ===== RESPONSIVE SCROLLBAR ADJUSTMENTS ===== */
+
+/* Thicker scrollbars for larger screens */
+@media (min-width: 1441px) {
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+  }
+}
+
+/* Thinner scrollbars for compact screens */
+@media (max-width: 1024px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    border: 1px solid transparent;
+  }
+}
+
+/* ===== RESPONSIVE ANIMATION ADJUSTMENTS ===== */
+
+/* Reduce animations on smaller screens to improve performance */
+@media (max-width: 1024px) {
+  * {
+    transition-duration: calc(var(--transition-fast) * 0.7) !important;
+  }
+  
+  .animate-pulse {
+    animation-duration: 1.5s;
+  }
+  
+  .animate-spin {
+    animation-duration: 0.8s;
+  }
+}
+
+/* Enhanced animations on larger screens */
+@media (min-width: 1441px) {
+  .message,
+  .session-item,
+  .input-bar {
+    transition: all var(--transition-slow);
+  }
+  
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .nav-link:hover {
+    transition: all var(--transition-base);
+    transform: translateY(-1px);
+  }
+}
+
+/* ===== RESPONSIVE FOCUS STATES ===== */
+
+/* Larger focus outlines on larger screens */
+@media (min-width: 1441px) {
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible {
+    outline-width: 3px;
+    outline-offset: 3px;
+  }
+}
+
+/* ===== PRINT RESPONSIVE (for desktop printing) ===== */
+
+@media print {
+  .sidebar {
+    display: none !important;
+  }
+  
+  .chat-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+  
+  .chat-header,
+  .chat-input-area {
+    display: none !important;
+  }
+  
+  .messages-container {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  
+  .message {
+    break-inside: avoid;
+    margin-bottom: 1rem !important;
+  }
+  
+  .message-content {
+    border: 1px solid #ccc !important;
+    padding: 1rem !important;
+  }
+} 

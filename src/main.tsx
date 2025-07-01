@@ -6,6 +6,17 @@ import { initializeApplication, setupGracefulShutdown, enableDevelopmentMode } f
 import { logger } from './utils/logger';
 
 import './index.css';
+import './styles/globals.css';
+import './styles/components.css';
+import './styles/responsive.css';
+
+// Log successful CSS loading
+console.log('🎨 FlowGenius CSS styles loaded successfully:', {
+  globals: 'OpenAI-inspired design system with CSS custom properties',
+  components: 'Component-specific styles with button, input, and card variants',
+  responsive: 'Desktop-focused responsive design for Electron window resizing',
+  timestamp: new Date().toISOString()
+});
 
 import './demos/ipc';
 // If you want use Node.js, the`nodeIntegration` needs to be enabled in the Main process.
