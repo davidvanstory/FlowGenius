@@ -64,8 +64,8 @@
   - [x] 1.9 Create environment validation script to check all required API keys and connections on startup
 
 - [ ] 2.0 Implement OpenAI-style UI with sidebar, chat, and input bar
-  - [ ] 2.1 Create main App.tsx layout with left sidebar and main chat pane (matching OpenAI's layout)
-  - [ ] 2.2 Implement Sidebar component with session list, create new session button, and OpenAI styling
+  - [x] 2.1 Create main App.tsx layout with left sidebar and main chat pane (matching OpenAI's layout)
+  - [x] 2.2 Implement Sidebar component with session list, create new session button, and OpenAI styling
   - [ ] 2.3 Create Chat component with message display, scrolling, and continuous thread design
   - [ ] 2.4 Build InputBar component with text field, microphone icon, and upload icon (styled like OpenAI)
   - [ ] 2.5 Create ConsoleLog component for real-time debugging (collapsible panel showing app logs/errors)
