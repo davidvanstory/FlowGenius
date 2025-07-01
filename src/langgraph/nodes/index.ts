@@ -10,13 +10,17 @@
  * - Includes comprehensive logging and error handling
  */
 
-// Placeholder - nodes will be exported as they are created
+// Export all implemented nodes
+export { processUserTurn } from './processUserTurn';
+export { processVoiceInput } from './processVoiceInput';
+export { generateSummary } from './generateSummary';
+
+// Placeholder - additional nodes will be exported as they are created
 export const LANGGRAPH_NODES_READY = false;
 
 // Future exports will include:
-// export { processUserTurn } from './processUserTurn';
-// export { processVoiceInput } from './processVoiceInput';
-// export { generateSummary } from './generateSummary';
+// export { generatePRD } from './generatePRD';
+// Additional nodes as needed
 
 /**
  * Node types for type safety and documentation
