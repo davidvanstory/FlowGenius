@@ -15,6 +15,7 @@
 - `src/components/ConsoleLog.tsx` - Collapsible console log panel for debugging app errors and logs
 - `src/components/ConsoleLog.test.tsx` - Unit tests for ConsoleLog component
 - `src/langgraph/index.ts` - Main LangGraph workflow setup and initialization
+- `src/hooks/useLangGraph.tsx` - React context and hooks for LangGraph integration
 - `src/langgraph/nodes/processUserTurn.ts` - LangGraph node for handling standard chat messages
 - `src/langgraph/nodes/processVoiceInput.ts` - LangGraph node for processing voice-to-text
 - `src/langgraph/nodes/generateSummary.ts` - LangGraph node for generating summaries with GPT-4o
@@ -84,7 +85,7 @@
   - [x] 3.6 Add workflow execution logging and debugging capabilities
   - [x] 3.7 Implement workflow error handling and recovery mechanisms
   - [ ] 3.8 Create workflow testing utilities with mock implementations
-  - [ ] 3.9 Create React hooks/context for connecting UI components to LangGraph workflow
+  - [x] 3.9 Create React hooks/context for connecting UI components to LangGraph workflow
 
 - [ ] 4.0 Integrate Supabase for persistent chat/session data
   - [ ] 4.1 Set up Supabase client configuration with environment variables

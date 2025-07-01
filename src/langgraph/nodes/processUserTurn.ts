@@ -86,11 +86,7 @@ export async function processUserTurn(state: AppState): Promise<Partial<AppState
       selectedModel: state.selected_models[state.current_stage]
     });
 
-    // Set processing flag
-    const processingUpdate = createStateUpdate({
-      is_processing: true,
-      error: undefined // Clear any previous errors
-    });
+    // Processing flag will be set by the React context, no need to set it here
 
     // For now, create a placeholder response
     // TODO: Replace with actual AI model integration in future tasks

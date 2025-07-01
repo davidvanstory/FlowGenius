@@ -12,7 +12,7 @@
  * - Comprehensive error handling
  */
 
-import { AppState, ChatMessage, UserAction } from '../../types/AppState';
+import { AppState, ChatMessage } from '../../types/AppState';
 import { logger } from '../../utils/logger';
 import { ErrorHandler } from '../../utils/errorHandler';
 import { validateLangGraphState, createStateUpdate } from '../state';

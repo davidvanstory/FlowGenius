@@ -3,12 +3,13 @@
  * 
  * This is the root component for FlowGenius that implements an OpenAI-style layout
  * with a left sidebar for session management and a main chat pane for conversations.
- * It manages the global application state and provides the layout structure.
+ * It now uses the LangGraph context for state management and workflow execution.
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { AppState, createInitialAppState, ChatMessage, IdeaEntity } from './types/AppState';
+import { IdeaEntity } from './types/AppState';
 import { logger } from './utils/logger';
+import { LangGraphProvider, useLangGraph, useSendMessage, useSessionManagement } from './hooks/useLangGraph';
 import Sidebar from './components/Sidebar';
 import Chat from './components/Chat';
 import InputBar from './components/InputBar';
@@ -50,75 +51,37 @@ const createMockSessions = (currentSessionId: string): IdeaEntity[] => [
 ];
 
 /**
- * Main App component that provides the OpenAI-style layout and state management
+ * Inner App component that uses LangGraph hooks
+ * This component has access to the LangGraph context
  */
-function App() {
-  // Generate a unique session ID for this app instance
-  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-  
-  // Main application state using the AppState interface
-  const [appState, setAppState] = useState<AppState>(() => {
-    logger.info('🎯 Initializing FlowGenius application state', { sessionId });
-    return createInitialAppState(sessionId, 'user_123');
-  });
+function AppInner() {
+  // LangGraph hooks for state and actions
+  const { state: langGraphState, clearError } = useLangGraph();
+  const { sendMessage, isLoading: isSendingMessage, error: sendMessageError } = useSendMessage();
+  const { createNewSession, currentSession, isLoading: isSessionLoading } = useSessionManagement();
 
   // UI state for sidebar visibility (responsive design)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
-  // Loading states for different operations
-  const [isSessionLoading, setIsSessionLoading] = useState(false);
-
   // Input state for the message input bar
   const [inputValue, setInputValue] = useState('');
 
   // Mock sessions data - will be replaced with real database data
-  const [sessions, setSessions] = useState<IdeaEntity[]>(() => createMockSessions(sessionId));
+  const [sessions, setSessions] = useState<IdeaEntity[]>(() => 
+    createMockSessions(langGraphState.appState.idea_id)
+  );
+
+  // Extract current app state from LangGraph context
+  const appState = langGraphState.appState;
+  const isProcessing = langGraphState.isExecuting || isSendingMessage;
+  const currentError = langGraphState.error || sendMessageError;
 
   /**
-   * Updates the application state with new data
-   * @param updates - Partial AppState updates to apply
+   * Handles input value changes
    */
-  const updateAppState = useCallback((updates: Partial<AppState>) => {
-    logger.debug('📝 Updating application state', { updates, currentState: appState });
-    
-    setAppState(prevState => {
-      const newState = {
-        ...prevState,
-        ...updates,
-        updated_at: new Date()
-      };
-      
-      logger.debug('✅ Application state updated', { 
-        previousStage: prevState.current_stage,
-        newStage: newState.current_stage,
-        messageCount: newState.messages.length
-      });
-      
-      return newState;
-    });
-  }, [appState]);
-
-  /**
-   * Adds a new message to the current conversation
-   * @param message - The chat message to add
-   */
-  const addMessage = useCallback((message: Omit<ChatMessage, 'created_at' | 'stage_at_creation'>) => {
-    logger.info('💬 Adding new message to conversation', { 
-      role: message.role, 
-      contentLength: message.content.length,
-      currentStage: appState.current_stage
-    });
-
-    const fullMessage: ChatMessage = {
-      ...message,
-      created_at: new Date(),
-      stage_at_creation: appState.current_stage
-    };
-
-    updateAppState({
-      messages: [...appState.messages, fullMessage]
-    });
-  }, [appState.current_stage, appState.messages, updateAppState]);
+  const handleInputChange = useCallback((value: string) => {
+    setInputValue(value);
+  }, []);
 
   /**
    * Toggles the sidebar visibility for responsive design
@@ -129,211 +92,51 @@ function App() {
   }, [isSidebarOpen]);
 
   /**
-   * Creates a new session/idea
+   * Handles sending a message through the LangGraph workflow
    */
-  const createNewSession = useCallback(() => {
-    const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    logger.info('🆕 Creating new session', { newSessionId, previousSession: appState.idea_id });
-    
-    setIsSessionLoading(true);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      const newState = createInitialAppState(newSessionId, appState.user_id);
-      setAppState(newState);
-      
-             // Add new session to sessions list
-       const newSession: IdeaEntity = {
-         id: newSessionId,
-         title: `New Session ${new Date().toLocaleTimeString()}`,
-         current_stage: 'brainstorm',
-         created_at: new Date(),
-         user_id: appState.user_id ?? 'user_123'
-       };
-      
-      setSessions(prevSessions => [newSession, ...prevSessions]);
-      setIsSessionLoading(false);
-      
-      logger.info('✅ New session created successfully', { sessionId: newSessionId });
-    }, 500);
-  }, [appState.idea_id, appState.user_id]);
-
-  /**
-   * Switches to a different session
-   * @param sessionId - The ID of the session to switch to
-   */
-  const switchToSession = useCallback((sessionId: string) => {
-    logger.info('🔄 Switching to session', { sessionId, currentSession: appState.idea_id });
-    
-    setIsSessionLoading(true);
-    
-    // Find the session in our mock data
-    const targetSession = sessions.find(session => session.id === sessionId);
-    
-    if (!targetSession) {
-      logger.error('❌ Session not found', { sessionId });
-      setIsSessionLoading(false);
-      return;
-    }
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      // Create new app state for the selected session
-      // TODO: Load actual chat history from database
-      const newState = createInitialAppState(sessionId, targetSession.user_id);
-      newState.title = targetSession.title;
-      newState.current_stage = targetSession.current_stage;
-      newState.created_at = targetSession.created_at;
-      
-      // Add some mock messages for demonstration
-      if (sessionId !== appState.idea_id) {
-        newState.messages = [
-          {
-            role: 'assistant',
-            content: `Welcome back to "${targetSession.title}"! This session is currently in the ${targetSession.current_stage} stage.`,
-            created_at: new Date(Date.now() - 1000 * 60 * 5),
-            stage_at_creation: targetSession.current_stage
-          }
-        ];
-      }
-      
-      setAppState(newState);
-      setIsSessionLoading(false);
-      
-      // Close sidebar on mobile after session switch
-      if (window.innerWidth < 1024) {
-        setIsSidebarOpen(false);
-      }
-      
-      logger.info('✅ Session switch completed', { sessionId, title: targetSession.title });
-    }, 300);
-  }, [appState.idea_id, sessions]);
-
-  /**
-   * Deletes a session
-   * @param sessionId - The ID of the session to delete
-   */
-  const deleteSession = useCallback((sessionId: string) => {
-    logger.info('🗑️ Deleting session', { sessionId });
-    
-    setSessions(prevSessions => prevSessions.filter(session => session.id !== sessionId));
-    
-    // If deleting current session, switch to another one or create new
-    if (sessionId === appState.idea_id) {
-      const remainingSessions = sessions.filter(session => session.id !== sessionId);
-      if (remainingSessions.length > 0 && remainingSessions[0]) {
-        switchToSession(remainingSessions[0].id);
-      } else {
-        createNewSession();
-      }
-    }
-    
-    logger.info('✅ Session deleted successfully', { sessionId });
-  }, [appState.idea_id, sessions, switchToSession, createNewSession]);
-
-  /**
-   * Renames a session
-   * @param sessionId - The ID of the session to rename
-   * @param newTitle - The new title for the session
-   */
-  const renameSession = useCallback((sessionId: string, newTitle: string) => {
-    logger.info('📝 Renaming session', { sessionId, newTitle });
-    
-    setSessions(prevSessions => 
-      prevSessions.map(session => 
-        session.id === sessionId 
-          ? { ...session, title: newTitle }
-          : session
-      )
-    );
-    
-    // Update current app state title if renaming current session
-    if (sessionId === appState.idea_id) {
-      updateAppState({ title: newTitle });
-    }
-    
-    logger.info('✅ Session renamed successfully', { sessionId, newTitle });
-  }, [appState.idea_id, updateAppState]);
-
-  /**
-   * Handles input value changes in the InputBar
-   * @param value - The new input value
-   */
-  const handleInputChange = useCallback((value: string) => {
-    logger.debug('✏️ Input value changed', { 
-      length: value.length,
-      hasContent: value.trim().length > 0
-    });
-    setInputValue(value);
-  }, []);
-
-  /**
-   * Handles sending a message from the InputBar
-   * @param message - The message content to send
-   */
-  const handleSendMessage = useCallback((message: string) => {
-    if (!message.trim() || appState.is_processing) {
+  const handleSendMessage = useCallback(async (message: string) => {
+    // Validate message
+    if (!message.trim() || isProcessing) {
       logger.debug('🚫 Message send blocked', { 
         hasContent: !!message.trim(),
-        isProcessing: appState.is_processing
+        isProcessing
       });
       return;
     }
 
-    logger.info('📤 Sending user message', { 
+    logger.info('📤 Sending user message via LangGraph', { 
       messageLength: message.length,
       currentStage: appState.current_stage,
       sessionId: appState.idea_id
     });
 
-    // Add user message to conversation
-    addMessage({
-      role: 'user',
-      content: message
-    });
-
-    // Clear input
-    setInputValue('');
-
-    // Set processing state
-    updateAppState({ 
-      is_processing: true,
-      last_user_action: 'chat'
-    });
-
-    // TODO: Integrate with LangGraph workflow in task 3.0
-    // For now, simulate a response
-    setTimeout(() => {
-      const responses = [
-        "I understand you're working on this idea. Let me help you develop it further.",
-        "That's an interesting perspective. Can you tell me more about the specific problem you're trying to solve?",
-        "I can see the potential in this concept. What would you say is the most important feature to focus on first?",
-        "Let's break this down into smaller, actionable components. What's the core value proposition here?"
-      ];
+    try {
+      // Send message through LangGraph workflow
+      await sendMessage(message);
       
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)] || "I understand you're working on this idea. Let me help you develop it further.";
+      // Clear input on successful send
+      setInputValue('');
       
-      addMessage({
-        role: 'assistant',
-        content: randomResponse
-      });
-
-      updateAppState({ is_processing: false });
-      
-      logger.info('🤖 Assistant response generated', { 
-        responseLength: randomResponse.length,
+      logger.info('✅ Message sent successfully via LangGraph', { 
+        messageLength: message.length,
         sessionId: appState.idea_id
       });
-    }, 1500);
-  }, [appState.is_processing, appState.current_stage, appState.idea_id, addMessage, updateAppState]);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('❌ Failed to send message via LangGraph', { 
+        error: errorMessage,
+        sessionId: appState.idea_id
+      });
+    }
+  }, [sendMessage, isProcessing, appState.current_stage, appState.idea_id]);
 
   /**
    * Handles voice recording requests from the InputBar
    * TODO: Implement in task 5.0 with Whisper API integration
    */
   const handleVoiceRecord = useCallback(() => {
-    logger.info('🎤 Voice recording requested (not yet implemented)');
-    // TODO: Implement voice recording functionality
+    logger.info('🎤 Voice recording requested (will be implemented in task 5.0)');
+    // TODO: This will use the useVoiceInput hook when we implement task 5.0
   }, []);
 
   /**
@@ -345,9 +148,74 @@ function App() {
     // TODO: Implement file upload functionality
   }, []);
 
-  // Log app initialization
+  /**
+   * Creates a new session using LangGraph
+   */
+  const handleCreateNewSession = useCallback(async () => {
+    logger.info('🆕 Creating new session via LangGraph');
+    
+    try {
+      await createNewSession('user_123');
+      
+      // Add new session to mock sessions list
+      const newSession: IdeaEntity = {
+        id: currentSession,
+        title: `New Session ${new Date().toLocaleTimeString()}`,
+        current_stage: 'brainstorm',
+        created_at: new Date(),
+        user_id: 'user_123'
+      };
+      
+      setSessions(prevSessions => [newSession, ...prevSessions]);
+      
+      logger.info('✅ New session created successfully via LangGraph', { 
+        sessionId: currentSession 
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('❌ Failed to create new session', { error: errorMessage });
+    }
+  }, [createNewSession, currentSession]);
+
+  /**
+   * Switches to a different session
+   * TODO: This will be fully implemented when we add session persistence in task 4.0
+   */
+  const handleSessionSwitch = useCallback((sessionId: string) => {
+    logger.info('🔄 Session switch requested (placeholder)', { sessionId });
+    // TODO: Implement actual session switching with LangGraph context
+    // For now, just log the request
+  }, []);
+
+  /**
+   * Deletes a session
+   * TODO: Implement when we add session persistence in task 4.0
+   */
+  const handleDeleteSession = useCallback((sessionId: string) => {
+    logger.info('🗑️ Session deletion requested (placeholder)', { sessionId });
+    // TODO: Implement actual session deletion
+  }, []);
+
+  /**
+   * Renames a session
+   * TODO: Implement when we add session persistence in task 4.0
+   */
+  const handleRenameSession = useCallback((sessionId: string, newTitle: string) => {
+    logger.info('✏️ Session rename requested (placeholder)', { sessionId, newTitle });
+    // TODO: Implement actual session renaming
+  }, []);
+
+  /**
+   * Clears the current error state
+   */
+  const handleClearError = useCallback(() => {
+    logger.info('🧹 Clearing error state');
+    clearError();
+  }, [clearError]);
+
+  // Log app initialization and state changes
   useEffect(() => {
-    logger.info('🚀 FlowGenius App component mounted', {
+    logger.info('🚀 FlowGenius App component mounted with LangGraph', {
       sessionId: appState.idea_id,
       currentStage: appState.current_stage,
       messageCount: appState.messages.length,
@@ -362,19 +230,25 @@ function App() {
     };
   }, [appState.idea_id, appState.current_stage, appState.messages.length, sessions.length]);
 
-  // Log state changes for debugging
+  // Log LangGraph state changes for debugging
   useEffect(() => {
-    logger.debug('📊 App state changed', {
+    logger.debug('📊 LangGraph state changed', {
       stage: appState.current_stage,
       messageCount: appState.messages.length,
-      isProcessing: appState.is_processing,
-      lastAction: appState.last_user_action
+      isExecuting: langGraphState.isExecuting,
+      lastAction: appState.last_user_action,
+      hasError: !!langGraphState.error
     });
-  }, [appState.current_stage, appState.messages.length, appState.is_processing, appState.last_user_action]);
+  }, [
+    appState.current_stage, 
+    appState.messages.length, 
+    langGraphState.isExecuting, 
+    appState.last_user_action, 
+    langGraphState.error
+  ]);
 
   return (
     <div className="app-container">
-
       {/* Mobile header with hamburger menu */}
       <div className="mobile-header">
         <button 
@@ -396,12 +270,12 @@ function App() {
           currentAppState={appState}
           isOpen={isSidebarOpen}
           onToggle={toggleSidebar}
-          onCreateNewSession={createNewSession}
-          onSessionSwitch={switchToSession}
+          onCreateNewSession={handleCreateNewSession}
+          onSessionSwitch={handleSessionSwitch}
           sessions={sessions}
           isLoading={isSessionLoading}
-          onDeleteSession={deleteSession}
-          onRenameSession={renameSession}
+          onDeleteSession={handleDeleteSession}
+          onRenameSession={handleRenameSession}
         />
 
         {/* Main Chat Area */}
@@ -413,9 +287,14 @@ function App() {
                 {appState.title || 'New Conversation'}
               </h1>
               <div className="chat-status">
-                <span className={`status-indicator ${appState.is_processing ? 'processing' : 'ready'}`}>
-                  {appState.is_processing ? 'Processing...' : `${appState.current_stage} stage`}
+                <span className={`status-indicator ${isProcessing ? 'processing' : 'ready'}`}>
+                  {isProcessing ? 'Processing...' : `${appState.current_stage} stage`}
                 </span>
+                {langGraphState.executionHistory.length > 0 && (
+                  <span className="execution-count">
+                    {langGraphState.executionHistory.length} executions
+                  </span>
+                )}
               </div>
             </div>
           </header>
@@ -425,7 +304,7 @@ function App() {
             <Chat
               messages={appState.messages}
               currentStage={appState.current_stage}
-              isProcessing={appState.is_processing}
+              isProcessing={isProcessing}
               autoScroll={true}
               onMessageAction={(action, messageIndex) => {
                 logger.info('🎯 Chat message action triggered', { action, messageIndex });
@@ -442,32 +321,61 @@ function App() {
               onSend={handleSendMessage}
               onVoiceRecord={handleVoiceRecord}
               onFileUpload={handleFileUpload}
-              isProcessing={appState.is_processing}
-              isVoiceEnabled={true} // Temporarily enabled to show the button
-              isUploadEnabled={true} // Temporarily enabled to show the button
+              isProcessing={isProcessing}
+              isVoiceEnabled={true} // Will be fully functional in task 5.0
+              isUploadEnabled={true} // For future implementation
               placeholder="Message FlowGenius..."
-              disabled={appState.is_processing}
+              disabled={isProcessing}
             />
           </div>
         </main>
       </div>
 
       {/* Error display */}
-      {appState.error && (
+      {currentError && (
         <div className="error-banner">
           <div className="error-content">
             <span className="error-icon">⚠️</span>
-            <span className="error-message">{appState.error}</span>
+            <span className="error-message">{currentError}</span>
             <button 
               className="error-dismiss"
-              onClick={() => updateAppState({ error: undefined })}
+              onClick={handleClearError}
             >
               ✕
             </button>
           </div>
         </div>
       )}
+
+      {/* Debug info in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="debug-info">
+          <details>
+            <summary>🔍 LangGraph Debug Info</summary>
+            <pre>{JSON.stringify({
+              currentStage: appState.current_stage,
+              lastAction: appState.last_user_action,
+              messageCount: appState.messages.length,
+              isExecuting: langGraphState.isExecuting,
+              executionCount: langGraphState.metrics.totalExecutions,
+              avgExecutionTime: Math.round(langGraphState.metrics.averageExecutionTime)
+            }, null, 2)}</pre>
+          </details>
+        </div>
+      )}
     </div>
+  );
+}
+
+/**
+ * Main App component with LangGraph provider
+ * This wraps the inner component with the LangGraph context
+ */
+function App() {
+  return (
+    <LangGraphProvider>
+      <AppInner />
+    </LangGraphProvider>
   );
 }
 
