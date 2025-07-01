@@ -62,7 +62,7 @@ const Update = () => {
     setProgressInfo(arg1)
   }, [])
 
-  const onUpdateDownloaded = useCallback((_event: Electron.IpcRendererEvent, ...args: any[]) => {
+  const onUpdateDownloaded = useCallback((_event: Electron.IpcRendererEvent, ..._args: any[]) => {
     setProgressInfo({ percent: 100 })
     setModalBtn(state => ({
       ...state,
@@ -91,10 +91,10 @@ const Update = () => {
     <>
       <Modal
         open={modalOpen}
-        cancelText={modalBtn?.cancelText}
-        okText={modalBtn?.okText}
-        onCancel={modalBtn?.onCancel}
-        onOk={modalBtn?.onOk}
+        cancelText={modalBtn.cancelText}
+        okText={modalBtn.okText}
+        onCancel={modalBtn.onCancel}
+        onOk={modalBtn.onOk}
         footer={updateAvailable ? /* hide footer */null : undefined}
       >
         <div className='modal-slot'>

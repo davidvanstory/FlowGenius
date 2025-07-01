@@ -39,15 +39,17 @@ function domReady(condition: DocumentReadyState[] = ['complete', 'interactive'])
 }
 
 const safeDOM = {
-  append(parent: HTMLElement, child: HTMLElement) {
+  append(parent: HTMLElement, child: HTMLElement): HTMLElement | undefined {
     if (!Array.from(parent.children).find(e => e === child)) {
       return parent.appendChild(child)
     }
+    return undefined
   },
-  remove(parent: HTMLElement, child: HTMLElement) {
+  remove(parent: HTMLElement, child: HTMLElement): HTMLElement | undefined {
     if (Array.from(parent.children).find(e => e === child)) {
       return parent.removeChild(child)
     }
+    return undefined
   },
 }
 
@@ -112,7 +114,9 @@ const { appendLoading, removeLoading } = useLoading()
 domReady().then(appendLoading)
 
 window.onmessage = (ev) => {
-  ev.data.payload === 'removeLoading' && removeLoading()
+  if (ev.data.payload === 'removeLoading') {
+    removeLoading()
+  }
 }
 
 setTimeout(removeLoading, 4999)

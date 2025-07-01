@@ -1,17 +1,19 @@
-import { useState } from 'react'
-import UpdateElectron from '@/components/update'
-import Clock from './components/Clock'
-import logoVite from './assets/logo-vite.svg'
-import logoElectron from './assets/logo-electron.svg'
-import './App.css'
+import { useState } from 'react';
+
+import logoElectron from './assets/logo-electron.svg';
+import logoVite from './assets/logo-vite.svg';
+import Clock from './components/Clock';
+
+import UpdateElectron from '@/components/update';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
   return (
     <div className='App'>
       <Clock />
       <div className='logo-box'>
-        <a href='https://github.com/electron-vite/electron-vite-react' target='_blank'>
+        <a href='https://github.com/electron-vite/electron-vite-react' target='_blank' rel="noreferrer">
           <img src={logoVite} className='logo vite' alt='Electron + Vite logo' />
           <img src={logoElectron} className='logo electron' alt='Electron + Vite logo' />
         </a>
@@ -34,7 +36,7 @@ function App() {
 
       <UpdateElectron />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
