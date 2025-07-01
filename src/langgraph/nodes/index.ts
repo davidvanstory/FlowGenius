@@ -15,6 +15,61 @@ export { processUserTurn } from './processUserTurn';
 export { processVoiceInput } from './processVoiceInput';
 export { generateSummary } from './generateSummary';
 
+// Export wrapped versions with error handling
+import { processUserTurn as processUserTurnBase } from './processUserTurn';
+import { processVoiceInput as processVoiceInputBase } from './processVoiceInput';
+import { generateSummary as generateSummaryBase } from './generateSummary';
+import { workflowErrorHandler } from '../workflowErrorHandler';
+import { AppState } from '../../types/AppState';
+
+/**
+ * Process user turn with error handling and recovery
+ */
+export async function processUserTurnWithErrorHandling(state: AppState): Promise<Partial<AppState>> {
+  try {
+    return await processUserTurnBase(state);
+  } catch (error) {
+    return await workflowErrorHandler.handleNodeError(
+      error instanceof Error ? error : new Error(String(error)),
+      'processUserTurn',
+      state,
+      processUserTurnBase
+    );
+  }
+}
+
+/**
+ * Process voice input with error handling and recovery
+ */
+export async function processVoiceInputWithErrorHandling(state: AppState): Promise<Partial<AppState>> {
+  try {
+    return await processVoiceInputBase(state);
+  } catch (error) {
+    return await workflowErrorHandler.handleNodeError(
+      error instanceof Error ? error : new Error(String(error)),
+      'processVoiceInput',
+      state,
+      processVoiceInputBase
+    );
+  }
+}
+
+/**
+ * Generate summary with error handling and recovery
+ */
+export async function generateSummaryWithErrorHandling(state: AppState): Promise<Partial<AppState>> {
+  try {
+    return await generateSummaryBase(state);
+  } catch (error) {
+    return await workflowErrorHandler.handleNodeError(
+      error instanceof Error ? error : new Error(String(error)),
+      'generateSummary',
+      state,
+      generateSummaryBase
+    );
+  }
+}
+
 // Placeholder - additional nodes will be exported as they are created
 export const LANGGRAPH_NODES_READY = false;
 

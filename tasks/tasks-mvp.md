@@ -81,8 +81,8 @@
   - [x] 3.3 Create placeholder nodes for V2T and summarization (to be implemented)
   - [x] 3.4 Implement conditional routing logic based on last_user_action
   - [x] 3.5 Create state management utilities for LangGraph workflow
-  - [ ] 3.6 Add workflow execution logging and debugging capabilities
-  - [ ] 3.7 Implement workflow error handling and recovery mechanisms
+  - [x] 3.6 Add workflow execution logging and debugging capabilities
+  - [x] 3.7 Implement workflow error handling and recovery mechanisms
   - [ ] 3.8 Create workflow testing utilities with mock implementations
   - [ ] 3.9 Create React hooks/context for connecting UI components to LangGraph workflow
 
