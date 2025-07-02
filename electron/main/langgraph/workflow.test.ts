@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { StateGraph, START, END } from '@langchain/langgraph';
 import { AppStateAnnotation, createInitialLangGraphState } from './state';
 import { processUserTurn } from './nodes/processUserTurn';
-import { AppState, ChatMessage } from '../types/AppState';
+import { AppState, ChatMessage } from '../../../src/types/AppState';
 
 // Mock the logger to avoid console spam during tests
 vi.mock('../utils/logger', () => ({

@@ -14,8 +14,8 @@
  * - Workflow visualization helpers
  */
 
-import { AppState } from '../types/AppState';
-import { logger } from '../utils/logger';
+import { AppState } from '../../../src/types/AppState';
+import { logger } from '../../../src/utils/logger';
 import { stateHistory, stateMonitor } from './stateUtils';
 
 /**

@@ -13,7 +13,7 @@ import {
   createStateUpdate,
   isAppState 
 } from './state';
-import { AppState, ChatMessage } from '../types/AppState';
+import { AppState, ChatMessage } from '../../../src/types/AppState';
 
 describe('LangGraph State Management', () => {
   let testState: AppState;

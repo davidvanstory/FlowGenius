@@ -9,7 +9,7 @@ import {
   CircuitBreakerState,
   RecoveryStrategy
 } from './workflowErrorHandler';
-import { AppState } from '../types/AppState';
+import { AppState } from '../../../src/types/AppState';
 import { createInitialLangGraphState } from './state';
 import { WorkflowLogger } from './workflowLogger';
 import { StateRecovery } from './stateUtils';

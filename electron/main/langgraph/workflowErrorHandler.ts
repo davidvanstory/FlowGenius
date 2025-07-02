@@ -14,9 +14,9 @@
  * - Graceful degradation
  */
 
-import { AppState, WorkflowStage } from '../types/AppState';
-import { ErrorHandler, ErrorInfo, RecoveryAction } from '../utils/errorHandler';
-import { logger } from '../utils/logger';
+import { AppState, WorkflowStage } from '../../../src/types/AppState';
+import { ErrorHandler, ErrorInfo, RecoveryAction } from '../../../src/utils/errorHandler';
+import { logger } from '../../../src/utils/logger';
 import { StateRecovery, stateHistory, StateSnapshot } from './stateUtils';
 import { WorkflowLogger } from './workflowLogger';
 

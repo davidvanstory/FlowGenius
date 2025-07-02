@@ -23,6 +23,16 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   // ...
 })
 
+// --------- Expose LangGraph API ---------
+contextBridge.exposeInMainWorld('langgraph', {
+  execute: (state: any) => ipcRenderer.invoke('langgraph:execute', state),
+  createSession: (ideaId: string, userId?: string) => 
+    ipcRenderer.invoke('langgraph:createSession', ideaId, userId),
+  validateState: (state: any) => ipcRenderer.invoke('langgraph:validateState', state),
+  getMetrics: (ideaId: string) => ipcRenderer.invoke('langgraph:getMetrics', ideaId),
+  clearSession: (ideaId: string) => ipcRenderer.invoke('langgraph:clearSession', ideaId),
+})
+
 // --------- Preload scripts loading ---------
 function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
   return new Promise(resolve => {

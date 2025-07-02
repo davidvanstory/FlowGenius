@@ -13,9 +13,9 @@
  * - Comprehensive error handling
  */
 
-import { AppState, ChatMessage } from '../../types/AppState';
-import { logger } from '../../utils/logger';
-import { ErrorHandler } from '../../utils/errorHandler';
+import { AppState, ChatMessage } from '../../../../src/types/AppState';
+import { logger } from '../../../../src/utils/logger';
+import { ErrorHandler } from '../../../../src/utils/errorHandler';
 import { validateLangGraphState, createStateUpdate } from '../state';
 
 /**

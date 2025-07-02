@@ -16,7 +16,7 @@ import {
   stateHistory,
   stateMonitor
 } from './stateUtils';
-import { AppState, ChatMessage } from '../types/AppState';
+import { AppState, ChatMessage } from '../../../src/types/AppState';
 import { createInitialLangGraphState } from './state';
 
 // Mock the logger

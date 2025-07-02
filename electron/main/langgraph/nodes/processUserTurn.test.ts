@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { processUserTurn } from './processUserTurn';
-import { AppState, ChatMessage } from '../../types/AppState';
+import { AppState, ChatMessage } from '../../../../src/types/AppState';
 import { createInitialLangGraphState } from '../state';
 
 // Mock the logger to avoid console spam during tests

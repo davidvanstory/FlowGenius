@@ -10,9 +10,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { IdeaEntity } from './types/AppState';
 import { logger } from './utils/logger';
 import { LangGraphProvider, useLangGraph, useSendMessage, useSessionManagement } from './hooks/useLangGraph';
+import { useAudioRecording } from './hooks/useAudioRecording';
 import Sidebar from './components/Sidebar';
 import Chat from './components/Chat';
 import InputBar from './components/InputBar';
+import { AudioRecorder } from './components/AudioRecorder';
+import { PermissionDialog } from './components/PermissionDialog';
 import './App.css';
 
 /**
@@ -76,6 +79,20 @@ function AppInner() {
   const isProcessing = langGraphState.isExecuting || isSendingMessage;
   const currentError = langGraphState.error || sendMessageError;
 
+  // Audio recording hook
+  const audioRecording = useAudioRecording((audioBlob, duration) => {
+    logger.info('🎤 Audio recording completed in App', { 
+      blobSize: audioBlob.size, 
+      duration,
+      mimeType: audioBlob.type 
+    });
+    
+    // For now, just log the recording - will be integrated with Whisper API in task 5.5
+    // TODO: Send audioBlob to Whisper API for transcription
+    const placeholderMessage = `[Voice recording: ${duration}s - Transcription will be implemented in task 5.5]`;
+    handleSendMessage(placeholderMessage);
+  });
+
   /**
    * Handles input value changes
    */
@@ -132,12 +149,11 @@ function AppInner() {
 
   /**
    * Handles voice recording requests from the InputBar
-   * TODO: Implement in task 5.0 with Whisper API integration
    */
   const handleVoiceRecord = useCallback(() => {
-    logger.info('🎤 Voice recording requested (will be implemented in task 5.0)');
-    // TODO: This will use the useVoiceInput hook when we implement task 5.0
-  }, []);
+    logger.info('🎤 Voice recording requested');
+    audioRecording.startRecording();
+  }, [audioRecording]);
 
   /**
    * Handles file upload requests from the InputBar
@@ -322,14 +338,42 @@ function AppInner() {
               onVoiceRecord={handleVoiceRecord}
               onFileUpload={handleFileUpload}
               isProcessing={isProcessing}
-              isVoiceEnabled={true} // Will be fully functional in task 5.0
+              isVoiceEnabled={true}
               isUploadEnabled={true} // For future implementation
               placeholder="Message FlowGenius..."
               disabled={isProcessing}
             />
+            
+            {/* Audio Recorder Modal (shows when has permission) */}
+            {audioRecording.hasPermission && (
+              <div 
+                className="audio-recorder-modal"
+                style={{ 
+                  display: audioRecording.recordingState === 'idle' ? 'none' : 'block' 
+                }}
+              >
+                <AudioRecorder
+                  onRecordingComplete={audioRecording.handleRecordingComplete}
+                  onRecordingError={audioRecording.handleRecordingError}
+                  onStateChange={audioRecording.handleRecordingStateChange}
+                  disabled={isProcessing}
+                  autoStart={true}
+                />
+              </div>
+            )}
           </div>
         </main>
       </div>
+
+      {/* Permission Dialog */}
+      <PermissionDialog
+        isOpen={audioRecording.isPermissionDialogOpen}
+        onPermissionGranted={audioRecording.handlePermissionGranted}
+        onPermissionDenied={audioRecording.handlePermissionDenied}
+        onClose={audioRecording.closePermissionDialog}
+        showTroubleshooting={audioRecording.showTroubleshooting}
+        errorMessage={audioRecording.errorMessage || undefined}
+      />
 
       {/* Error display */}
       {currentError && (

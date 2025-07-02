@@ -20,7 +20,7 @@ import { processUserTurn as processUserTurnBase } from './processUserTurn';
 import { processVoiceInput as processVoiceInputBase } from './processVoiceInput';
 import { generateSummary as generateSummaryBase } from './generateSummary';
 import { workflowErrorHandler } from '../workflowErrorHandler';
-import { AppState } from '../../types/AppState';
+import { AppState } from '../../../../src/types/AppState';
 
 /**
  * Process user turn with error handling and recovery

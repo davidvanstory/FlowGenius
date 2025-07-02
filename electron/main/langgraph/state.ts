@@ -13,8 +13,8 @@
  */
 
 import { Annotation } from '@langchain/langgraph';
-import { AppState, ChatMessage, WorkflowStage, UserAction, createInitialAppState } from '../types/AppState';
-import { logger } from '../utils/logger';
+import { AppState, ChatMessage, WorkflowStage, UserAction, createInitialAppState } from '../../../src/types/AppState';
+import { logger } from '../../../src/utils/logger';
 
 /**
  * LangGraph state annotation that defines how state updates are handled
@@ -65,7 +65,7 @@ export const AppStateAnnotation = Annotation.Root({
 
   /** User-defined prompts for each stage */
   user_prompts: Annotation<AppState['user_prompts']>({
-    reducer: (existing, update) => {
+    reducer: (existing: any, update: any) => {
       if (update) {
         console.log('📝 State: Updating user prompts', { update });
         return { ...existing, ...update };
@@ -81,7 +81,7 @@ export const AppStateAnnotation = Annotation.Root({
 
   /** Selected AI models for each stage */
   selected_models: Annotation<AppState['selected_models']>({
-    reducer: (existing, update) => {
+    reducer: (existing: any, update: any) => {
       if (update) {
         console.log('🤖 State: Updating model selection', { update });
         return { ...existing, ...update };

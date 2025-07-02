@@ -98,8 +98,8 @@
   - [ ] 4.8 Create comprehensive logging for all database operations
 
 - [ ] 5.0 Implement voice-to-text node with Whisper API
-  - [ ] 5.1 Create AudioRecorder component using MediaRecorder API with proper browser compatibility
-  - [ ] 5.2 Implement microphone permission handling with user-friendly prompts
+  - [x] 5.1 Create AudioRecorder component using MediaRecorder API with proper browser compatibility
+  - [x] 5.2 Implement microphone permission handling with user-friendly prompts
   - [ ] 5.3 Add visual feedback during recording (blue ebbing microphone icon like GPT-4o)
   - [ ] 5.4 Create audio format validation and conversion utilities (ensure Whisper API compatibility)
   - [ ] 5.5 Build WhisperService for handling API calls with proper error handling and retries

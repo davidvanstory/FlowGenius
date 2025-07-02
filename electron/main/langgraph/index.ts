@@ -19,8 +19,8 @@ import { processUserTurn } from './nodes/processUserTurn';
 import { processVoiceInput } from './nodes/processVoiceInput';
 import { generateSummary } from './nodes/generateSummary';
 import { routeUserAction, RouteNames } from './router';
-import { AppState } from '../types/AppState';
-import { logger } from '../utils/logger';
+import { AppState } from '../../../src/types/AppState';
+import { logger } from '../../../src/utils/logger';
 import { WorkflowLogger, createWorkflowLogger } from './workflowLogger';
 
 /**
@@ -252,5 +252,4 @@ export {
 };
 
 // Export types for React integration
-export type { AppState } from '../types/AppState';
 export type { WorkflowLogger } from './workflowLogger'; 

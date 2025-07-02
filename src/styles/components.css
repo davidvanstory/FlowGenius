@@ -807,4 +807,379 @@
 .slide-exit-active {
   transform: translateX(-100%);
   transition: transform var(--transition-base);
+}
+
+/* Permission Dialog Styles */
+.permission-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.permission-dialog {
+  background-color: #2f2f2f;
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid #4d4d4f;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid #4d4d4f;
+}
+
+.dialog-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #ececec;
+}
+
+.dialog-close-button {
+  background: none;
+  border: none;
+  color: #8e8ea0;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 1.125rem;
+  transition: all 0.2s ease;
+}
+
+.dialog-close-button:hover {
+  color: #ececec;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dialog-content {
+  padding: 1.5rem;
+}
+
+.dialog-description {
+  margin-bottom: 1.5rem;
+}
+
+.dialog-description p {
+  margin: 0;
+  color: #c5c5d2;
+  line-height: 1.5;
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  color: #fca5a5;
+}
+
+.error-icon {
+  font-size: 1rem;
+}
+
+.permission-status {
+  background-color: #1a1a1a;
+  border: 1px solid #4d4d4f;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.status-label {
+  color: #8e8ea0;
+  font-size: 0.875rem;
+}
+
+.status-value {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.status-value.granted {
+  color: #10b981;
+}
+
+.status-value.denied {
+  color: #ef4444;
+}
+
+.status-value.prompt,
+.status-value.unknown {
+  color: #f59e0b;
+}
+
+.device-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.device-label {
+  color: #8e8ea0;
+  font-size: 0.875rem;
+}
+
+.device-count {
+  color: #10b981;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.browser-instructions {
+  background-color: rgba(16, 163, 127, 0.1);
+  border: 1px solid rgba(16, 163, 127, 0.3);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.browser-instructions h4 {
+  margin: 0 0 0.75rem 0;
+  color: #10a37f;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.browser-instructions ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #c5c5d2;
+}
+
+.browser-instructions li {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.troubleshooting {
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.troubleshooting h4 {
+  margin: 0 0 0.75rem 0;
+  color: #f59e0b;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.troubleshooting ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #c5c5d2;
+}
+
+.troubleshooting li {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #4d4d4f;
+  justify-content: flex-end;
+}
+
+.dialog-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dialog-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dialog-button.secondary {
+  background-color: transparent;
+  color: #8e8ea0;
+  border-color: #4d4d4f;
+}
+
+.dialog-button.secondary:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ececec;
+}
+
+.dialog-button.primary {
+  background-color: #10a37f;
+  color: #ffffff;
+  border-color: #10a37f;
+}
+
+.dialog-button.primary:hover:not(:disabled) {
+  background-color: #0d8c6c;
+  border-color: #0d8c6c;
+}
+
+.loading-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.dialog-footer {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+.privacy-note {
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #8e8ea0;
+  font-style: italic;
+}
+
+/* Audio Recorder Styles */
+.audio-recorder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.audio-recorder-button {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 2px solid #4d4d4f;
+  background-color: #2f2f2f;
+  color: #8e8ea0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.audio-recorder-button:hover:not(:disabled) {
+  border-color: #10a37f;
+  color: #10a37f;
+  background-color: rgba(16, 163, 127, 0.1);
+}
+
+.audio-recorder-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audio-recorder.recording .audio-recorder-button {
+  border-color: #ef4444;
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+  animation: pulse 2s infinite;
+}
+
+.audio-recorder.requesting-permission .audio-recorder-button {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
+.audio-recorder.error .audio-recorder-button {
+  border-color: #ef4444;
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.recording-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
+}
+
+.status-message {
+  font-size: 0.875rem;
+  color: #8e8ea0;
+  text-align: center;
+}
+
+.recording-duration {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ef4444;
+  font-family: 'Courier New', monospace;
+}
+
+.audio-level-indicator {
+  width: 100px;
+  height: 4px;
+  background-color: #4d4d4f;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.audio-level-bar {
+  height: 100%;
+  transition: width 0.1s ease, background-color 0.3s ease;
+  border-radius: 2px;
+}
+
+.recording-info {
+  font-size: 0.75rem;
+  color: #8e8ea0;
+  text-align: center;
 } 

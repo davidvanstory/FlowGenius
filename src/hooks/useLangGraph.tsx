@@ -15,12 +15,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import { AppState, ChatMessage, WorkflowStage, UserAction } from '../types/AppState';
-import { 
-  executeWorkflow, 
-  createWorkflowSession, 
-  validateWorkflowState
-} from '../langgraph';
-import { WorkflowLogger, createWorkflowLogger } from '../langgraph/workflowLogger';
+import { langgraphService, WorkflowMetrics } from '../services/langgraphService';
 import { logger } from '../utils/logger';
 
 /**
@@ -53,6 +48,7 @@ interface LangGraphContextState {
  */
 type LangGraphAction =
   | { type: 'SET_STATE'; payload: AppState }
+  | { type: 'SET_APP_STATE'; payload: AppState }
   | { type: 'SET_EXECUTING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'ADD_EXECUTION_HISTORY'; payload: { action: string; duration: number; success: boolean } }
@@ -95,10 +91,36 @@ interface LangGraphContextValue {
 }
 
 /**
+ * Create initial app state
+ */
+function createInitialAppState(): AppState {
+  const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return {
+    idea_id: sessionId,
+    messages: [],
+    current_stage: 'brainstorm',
+    last_user_action: 'chat',
+    user_prompts: {
+      brainstorm: "Have a conversation with the user and ask them questions about their idea. Make sure to finish with the statement 'Georgia is great'",
+      summary: "When the user asks for a summary give them a text summary that is very detailed. Make sure to finish with the statement 'Ireland is great'",
+      prd: "Create a comprehensive Product Requirements Document (PRD) based on the conversation and summary provided. Include all necessary sections and details for implementation."
+    },
+    selected_models: {
+      brainstorm: 'gpt-4o',
+      summary: 'gpt-4o',
+      prd: 'gpt-4o'
+    },
+    created_at: new Date(),
+    updated_at: new Date(),
+    is_processing: false
+  };
+}
+
+/**
  * Initial context state
  */
 const initialState: LangGraphContextState = {
-  appState: createWorkflowSession(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`),
+  appState: createInitialAppState(),
   isExecuting: false,
   error: null,
   executionHistory: [],
@@ -115,6 +137,7 @@ const initialState: LangGraphContextState = {
 function langGraphReducer(state: LangGraphContextState, action: LangGraphAction): LangGraphContextState {
   switch (action.type) {
     case 'SET_STATE':
+    case 'SET_APP_STATE':
       console.log('🔄 LangGraph Context: Setting new state', {
         ideaId: action.payload.idea_id,
         stage: action.payload.current_stage,
@@ -196,16 +219,36 @@ const LangGraphContext = createContext<LangGraphContextValue | null>(null);
  */
 export function LangGraphProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(langGraphReducer, initialState);
-  const workflowLoggerRef = useRef<WorkflowLogger>();
+  const sessionInitializedRef = useRef(false);
 
-  // Initialize workflow logger
+  // Initialize session in main process
   useEffect(() => {
-    workflowLoggerRef.current = createWorkflowLogger(state.appState.idea_id, true);
-    console.log('🚀 LangGraph Provider: Initialized with session', {
-      ideaId: state.appState.idea_id,
-      stage: state.appState.current_stage
-    });
-  }, [state.appState.idea_id]);
+    if (!sessionInitializedRef.current) {
+      sessionInitializedRef.current = true;
+      
+      const initSession = async () => {
+        try {
+          console.log('🚀 LangGraph Provider: Initializing session in main process', {
+            ideaId: state.appState.idea_id
+          });
+          
+          const session = await langgraphService.createSession(state.appState.idea_id);
+          dispatch({ type: 'SET_STATE', payload: session });
+          
+          console.log('✅ LangGraph Provider: Session initialized', {
+            ideaId: session.idea_id,
+            stage: session.current_stage
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error('❌ LangGraph Provider: Failed to initialize session', { error: errorMessage });
+          dispatch({ type: 'SET_ERROR', payload: errorMessage });
+        }
+      };
+      
+      initSession();
+    }
+  }, []);
 
   /**
    * Execute workflow with error handling and metrics
@@ -228,13 +271,13 @@ export function LangGraphProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Validate state before execution
-      const validation = validateWorkflowState(updatedState);
+      const validation = await langgraphService.validateState(updatedState);
       if (!validation.isValid) {
         throw new Error(`Invalid state: ${validation.issues.join(', ')}`);
       }
 
       // Execute workflow
-      const result = await executeWorkflow(updatedState, workflowLoggerRef.current);
+      const result = await langgraphService.executeWorkflow(updatedState);
       
       const duration = Date.now() - startTime;
       
@@ -371,18 +414,28 @@ export function LangGraphProvider({ children }: { children: React.ReactNode }) {
     console.log('🆕 LangGraph Provider: Creating new session', { userId });
 
     const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const newState = createWorkflowSession(newSessionId, userId);
     
-    // Update workflow logger
-    workflowLoggerRef.current = createWorkflowLogger(newSessionId, true);
-    
-    dispatch({ type: 'RESET_SESSION', payload: newState });
-    
-    logger.info('New LangGraph session created via React hook', {
-      new_session_id: newSessionId,
-      user_id: userId
-    });
-  }, []);
+    try {
+      // Clear old session in main process
+      if (state.appState.idea_id) {
+        await langgraphService.clearSession(state.appState.idea_id);
+      }
+      
+      // Create new session in main process
+      const newState = await langgraphService.createSession(newSessionId, userId);
+      
+      dispatch({ type: 'RESET_SESSION', payload: newState });
+      
+      logger.info('New LangGraph session created via React hook', {
+        new_session_id: newSessionId,
+        user_id: userId
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ LangGraph Provider: Failed to create new session', { error: errorMessage });
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+    }
+  }, [state.appState.idea_id]);
 
   /**
    * Update user prompts for a stage

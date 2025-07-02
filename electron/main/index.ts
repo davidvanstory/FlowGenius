@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
 import { update } from './update'
+import { initializeLangGraphHandlers, cleanupLangGraphHandlers } from './langgraph-handler'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -79,11 +80,21 @@ async function createWindow() {
   update(win)
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  // Initialize LangGraph IPC handlers
+  initializeLangGraphHandlers()
+  
+  // Create main window
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   win = null
-  if (process.platform !== 'darwin') app.quit()
+  if (process.platform !== 'darwin') {
+    // Cleanup LangGraph handlers before quitting
+    cleanupLangGraphHandlers()
+    app.quit()
+  }
 })
 
 app.on('second-instance', () => {

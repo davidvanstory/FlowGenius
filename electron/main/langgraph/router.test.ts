@@ -14,7 +14,7 @@ import {
   getRoutingDescription,
   RouteNames 
 } from './router';
-import { AppState } from '../types/AppState';
+import { AppState } from '../../../src/types/AppState';
 import { createInitialLangGraphState } from './state';
 
 // Mock the logger

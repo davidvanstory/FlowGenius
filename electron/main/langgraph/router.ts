@@ -9,8 +9,8 @@
  * dynamic flow control based on user interactions and workflow stages.
  */
 
-import { AppState } from '../types/AppState';
-import { logger } from '../utils/logger';
+import { AppState } from '../../../src/types/AppState';
+import { logger } from '../../../src/utils/logger';
 
 /**
  * Route names that correspond to LangGraph nodes

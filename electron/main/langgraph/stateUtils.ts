@@ -12,8 +12,8 @@
  * - Performance monitoring
  */
 
-import { AppState, ChatMessage, WorkflowStage, UserAction } from '../types/AppState';
-import { logger } from '../utils/logger';
+import { AppState, ChatMessage, WorkflowStage, UserAction } from '../../../src/types/AppState';
+import { logger } from '../../../src/utils/logger';
 import { validateLangGraphState, createStateUpdate } from './state';
 
 /**
