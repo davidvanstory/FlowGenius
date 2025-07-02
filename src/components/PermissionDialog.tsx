@@ -413,23 +413,34 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
             Cancel
           </button>
           
-          <button
-            type="button"
-            onClick={requestPermission}
-            className="dialog-button primary"
-            disabled={isChecking || permissionState === PermissionState.GRANTED}
-          >
-            {isChecking ? (
-              <>
-                <span className="loading-spinner"></span>
-                Requesting...
-              </>
-            ) : permissionState === PermissionState.GRANTED ? (
-              'Permission Granted ✅'
-            ) : (
-              'Allow Microphone Access'
-            )}
-          </button>
+          {permissionState === PermissionState.GRANTED ? (
+            <button
+              type="button"
+              onClick={() => {
+                logger.info('✅ Permission already granted, proceeding to recording');
+                onPermissionGranted();
+              }}
+              className="dialog-button primary"
+            >
+              Continue to Recording ✅
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={requestPermission}
+              className="dialog-button primary"
+              disabled={isChecking}
+            >
+              {isChecking ? (
+                <>
+                  <span className="loading-spinner"></span>
+                  Requesting...
+                </>
+              ) : (
+                'Allow Microphone Access'
+              )}
+            </button>
+          )}
         </div>
 
         {/* Footer */}
