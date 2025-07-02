@@ -19,6 +19,46 @@ import { logger } from '../utils/logger';
 import { handleAudioError } from '../utils/errorHandler';
 
 /**
+ * Global registry to track all active MediaRecorder instances
+ * This helps prevent memory leaks when components remount
+ */
+const globalMediaRecorderRegistry = new Map<string, { mediaRecorder: MediaRecorder; instanceId: string }>();
+
+/**
+ * Global cleanup function to stop all orphaned MediaRecorder instances
+ */
+function cleanupAllMediaRecorders() {
+  logger.info('🧹 Global cleanup: Stopping all registered MediaRecorder instances', { 
+    activeCount: globalMediaRecorderRegistry.size 
+  });
+  
+  for (const [id, { mediaRecorder, instanceId }] of globalMediaRecorderRegistry.entries()) {
+    try {
+      if (mediaRecorder.state === 'recording' || mediaRecorder.state === 'paused') {
+        logger.warn('🛑 Force stopping orphaned MediaRecorder', { instanceId, state: mediaRecorder.state });
+        mediaRecorder.stop();
+      }
+      
+      // Clear event handlers
+      mediaRecorder.ondataavailable = null;
+      mediaRecorder.onstop = null;
+      mediaRecorder.onstart = null;
+      mediaRecorder.onerror = null;
+      mediaRecorder.onpause = null;
+      mediaRecorder.onresume = null;
+    } catch (error) {
+      logger.warn('⚠️ Error cleaning up orphaned MediaRecorder', { 
+        instanceId, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  }
+  
+  globalMediaRecorderRegistry.clear();
+  logger.info('✅ Global cleanup completed');
+}
+
+/**
  * Recording state enumeration
  */
 export enum RecordingState {
@@ -123,6 +163,9 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioLevelIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const lastChunkLogTimeRef = useRef<number>(0);
+  const chunkCountSinceLastLogRef = useRef<number>(0);
+  const instanceIdRef = useRef<string>(`recorder_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
 
   /**
    * Update recording state and notify parent component
@@ -131,6 +174,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     logger.info('🎤 AudioRecorder: State change', { 
       from: recordingState, 
       to: newState,
+      instanceId: instanceIdRef.current,
       timestamp: new Date()
     });
     
@@ -285,6 +329,15 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       // Set up audio level monitoring
       setupAudioLevelMonitoring(stream);
 
+      // Clean up any existing orphaned instances before creating new one
+      if (globalMediaRecorderRegistry.size > 0) {
+        logger.warn('⚠️ Found orphaned MediaRecorder instances before creating new one', { 
+          orphanedCount: globalMediaRecorderRegistry.size,
+          instanceId: instanceIdRef.current
+        });
+        cleanupAllMediaRecorders();
+      }
+
       // Create MediaRecorder
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: mimeType || audioConfig.mimeType
@@ -293,14 +346,42 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
+      // Register MediaRecorder in global registry
+      const registryKey = `${instanceIdRef.current}_${Date.now()}`;
+      globalMediaRecorderRegistry.set(registryKey, { 
+        mediaRecorder, 
+        instanceId: instanceIdRef.current 
+      });
+      
+      logger.info('📝 MediaRecorder registered globally', { 
+        instanceId: instanceIdRef.current,
+        registryKey,
+        totalActive: globalMediaRecorderRegistry.size
+      });
+
       // Set up MediaRecorder event handlers
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
-          logger.debug('📊 AudioRecorder: Data chunk received', { 
-            size: event.data.size,
-            totalChunks: audioChunksRef.current.length
-          });
+          chunkCountSinceLastLogRef.current++;
+          
+          // Throttle logging: log every 2 seconds or every 20 chunks, whichever comes first
+          const now = Date.now();
+          const timeSinceLastLog = now - lastChunkLogTimeRef.current;
+          const shouldLog = timeSinceLastLog >= 2000 || chunkCountSinceLastLogRef.current >= 20;
+          
+          if (shouldLog) {
+            logger.debug('📊 AudioRecorder: Data chunks received', { 
+              latestChunkSize: event.data.size,
+              totalChunks: audioChunksRef.current.length,
+              chunksInPeriod: chunkCountSinceLastLogRef.current,
+              periodMs: timeSinceLastLog,
+              instanceId: instanceIdRef.current
+            });
+            
+            lastChunkLogTimeRef.current = now;
+            chunkCountSinceLastLogRef.current = 0;
+          }
         }
       };
 
@@ -401,7 +482,9 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
    * Clean up recording resources
    */
   const cleanupRecording = useCallback(() => {
-    logger.debug('🧹 AudioRecorder: Cleaning up recording resources');
+    logger.debug('🧹 AudioRecorder: Cleaning up recording resources', { 
+      instanceId: instanceIdRef.current 
+    });
 
     // Clear intervals
     if (durationIntervalRef.current) {
@@ -412,6 +495,52 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     if (audioLevelIntervalRef.current) {
       clearInterval(audioLevelIntervalRef.current);
       audioLevelIntervalRef.current = null;
+    }
+
+    // Clean up MediaRecorder and clear event handlers to prevent memory leaks
+    if (mediaRecorderRef.current) {
+      const mediaRecorder = mediaRecorderRef.current;
+      
+      // Stop recording if still active
+      if (mediaRecorder.state === 'recording' || mediaRecorder.state === 'paused') {
+        try {
+          mediaRecorder.stop();
+          logger.debug('🛑 AudioRecorder: Forced MediaRecorder stop during cleanup', { 
+            instanceId: instanceIdRef.current 
+          });
+        } catch (error) {
+          logger.warn('⚠️ AudioRecorder: Error stopping MediaRecorder during cleanup', { 
+            instanceId: instanceIdRef.current,
+            error: error instanceof Error ? error.message : String(error) 
+          });
+        }
+      }
+      
+      // Clear all event handlers to prevent orphaned callbacks
+      mediaRecorder.ondataavailable = null;
+      mediaRecorder.onstop = null;
+      mediaRecorder.onstart = null;
+      mediaRecorder.onerror = null;
+      mediaRecorder.onpause = null;
+      mediaRecorder.onresume = null;
+      
+      // Remove from global registry
+      for (const [key, { mediaRecorder: registeredRecorder, instanceId }] of globalMediaRecorderRegistry.entries()) {
+        if (registeredRecorder === mediaRecorder || instanceId === instanceIdRef.current) {
+          globalMediaRecorderRegistry.delete(key);
+          logger.debug('🗑️ MediaRecorder unregistered from global registry', { 
+            instanceId: instanceIdRef.current,
+            registryKey: key,
+            remainingActive: globalMediaRecorderRegistry.size
+          });
+          break;
+        }
+      }
+      
+      logger.debug('🧹 AudioRecorder: MediaRecorder event handlers cleared', { 
+        instanceId: instanceIdRef.current 
+      });
+      mediaRecorderRef.current = null;
     }
 
     // Stop media stream
@@ -431,12 +560,17 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       audioContextRef.current = null;
     }
 
-    // Clear refs
-    mediaRecorderRef.current = null;
+    // Clear refs and reset counters
     analyserRef.current = null;
     audioChunksRef.current = [];
+    lastChunkLogTimeRef.current = 0;
+    chunkCountSinceLastLogRef.current = 0;
     
     setAudioLevel(0);
+    
+    logger.debug('✅ AudioRecorder: Cleanup completed successfully', { 
+      instanceId: instanceIdRef.current 
+    });
   }, []);
 
   /**
@@ -449,11 +583,33 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   }, []);
 
   /**
+   * Initialize component and clean up any orphaned instances
+   */
+  useEffect(() => {
+    logger.info('🎤 AudioRecorder: Component mounted', { 
+      instanceId: instanceIdRef.current,
+      autoStart,
+      disabled 
+    });
+    
+    // Clean up any orphaned MediaRecorder instances from previous component unmounts
+    if (globalMediaRecorderRegistry.size > 0) {
+      logger.warn('⚠️ Found orphaned MediaRecorder instances, cleaning up', { 
+        orphanedCount: globalMediaRecorderRegistry.size,
+        instanceId: instanceIdRef.current
+      });
+      cleanupAllMediaRecorders();
+    }
+  }, []); // Only run on mount
+
+  /**
    * Auto-start recording if requested
    */
   useEffect(() => {
     if (autoStart && recordingState === RecordingState.IDLE && !disabled) {
-      logger.info('🚀 AudioRecorder: Auto-starting recording');
+      logger.info('🚀 AudioRecorder: Auto-starting recording', { 
+        instanceId: instanceIdRef.current 
+      });
       startRecording();
     }
   }, [autoStart, disabled]); // Removed recordingState and startRecording to avoid infinite loop
@@ -463,7 +619,9 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
    */
   useEffect(() => {
     return () => {
-      logger.debug('🧹 AudioRecorder: Component unmounting, cleaning up');
+      logger.debug('🧹 AudioRecorder: Component unmounting, cleaning up', { 
+        instanceId: instanceIdRef.current 
+      });
       cleanupRecording();
     };
   }, [cleanupRecording]);

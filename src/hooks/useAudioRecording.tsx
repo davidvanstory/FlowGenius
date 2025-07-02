@@ -213,13 +213,15 @@ export function useAudioRecording(
    * Handle recording state change
    */
   const handleRecordingStateChange = useCallback((newState: RecordingState) => {
-    logger.debug('🔄 Recording state changed', { 
-      from: state.recordingState, 
-      to: newState 
+    setState(prev => {
+      logger.debug('🔄 Recording state changed', { 
+        from: prev.recordingState, 
+        to: newState 
+      });
+      
+      return { ...prev, recordingState: newState };
     });
-    
-    setState(prev => ({ ...prev, recordingState: newState }));
-  }, [state.recordingState]);
+  }, []); // No dependencies to ensure callback stability
 
   /**
    * Handle permission granted
