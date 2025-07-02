@@ -55,6 +55,25 @@ interface ElectronFileAPI {
 }
 
 /**
+ * Environment variables API for secure access to main process env vars
+ */
+interface ElectronEnvAPI {
+  /**
+   * Get environment variables needed by renderer process
+   */
+  getVars(): Promise<{ 
+    success: boolean; 
+    data?: {
+      OPENAI_API_KEY?: string;
+      NODE_ENV?: string;
+      SUPABASE_URL?: string;
+      SUPABASE_ANON_KEY?: string;
+    };
+    error?: string;
+  }>;
+}
+
+/**
  * Audio recording operations for FlowGenius
  */
 interface ElectronAudioAPI {
@@ -72,6 +91,81 @@ interface ElectronAudioAPI {
    * Get available audio input devices
    */
   getAudioDevices(): Promise<{ success: boolean; devices?: MediaDeviceInfo[]; error?: string }>;
+  
+  /**
+   * Save audio blob data to filesystem
+   */
+  saveAudioFile(
+    audioData: Buffer, 
+    originalName?: string, 
+    mimeType?: string
+  ): Promise<{ 
+    success: boolean; 
+    filePath?: string; 
+    error?: string;
+    metadata?: {
+      size: number;
+      format: string;
+      duration?: number;
+    };
+  }>;
+  
+  /**
+   * Convert audio file to optimal format
+   */
+  convertAudioFile(
+    inputPath: string,
+    options?: {
+      format?: 'wav' | 'mp3' | 'webm';
+      sampleRate?: number;
+      channels?: number;
+      quality?: number;
+      overwrite?: boolean;
+    }
+  ): Promise<{ 
+    success: boolean; 
+    filePath?: string; 
+    error?: string;
+    metadata?: {
+      size: number;
+      format: string;
+      duration?: number;
+    };
+  }>;
+  
+  /**
+   * Get audio file information
+   */
+  getAudioFileInfo(filePath: string): Promise<{ 
+    success: boolean; 
+    filePath?: string;
+    error?: string;
+    metadata?: {
+      size: number;
+      format: string;
+      duration?: number;
+    };
+  }>;
+  
+  /**
+   * Delete audio file from filesystem
+   */
+  deleteAudioFile(filePath: string): Promise<{ success: boolean; error?: string }>;
+  
+  /**
+   * Clean up old temporary files
+   */
+  cleanupOldFiles(maxAge?: number): Promise<{ 
+    success: boolean; 
+    deletedCount?: number;
+    errors?: string[];
+    error?: string;
+  }>;
+  
+  /**
+   * Get temporary directory path
+   */
+  getTempDirectory(): Promise<string>;
 }
 
 /**
@@ -117,6 +211,7 @@ interface ElectronAPI {
   files: ElectronFileAPI;
   audio: ElectronAudioAPI;
   app: ElectronAppAPI;
+  env: ElectronEnvAPI;
 }
 
 /**
@@ -196,6 +291,7 @@ export function getElectronEnvironment(): ElectronEnvironment {
 export type {
   IpcRendererAPI,
   ElectronFileAPI,
+  ElectronEnvAPI,
   ElectronAudioAPI,
   ElectronAppAPI,
   ElectronAPI,

@@ -79,15 +79,17 @@ const DEFAULT_AUDIO_CONFIG: Required<AudioConfig> = {
 };
 
 /**
- * Supported audio MIME types in order of preference
+ * Supported audio MIME types in order of preference (prioritizing OpenAI Whisper compatibility)
  */
 const SUPPORTED_MIME_TYPES = [
-  'audio/webm;codecs=opus',
-  'audio/webm',
   'audio/mp4',
-  'audio/wav',
+  'audio/mp4;codecs=mp4a.40.2',
+  'audio/mpeg',
+  'audio/webm',
+  'audio/webm;codecs=opus',
   'audio/ogg;codecs=opus',
-  'audio/ogg'
+  'audio/ogg',
+  'audio/wav'
 ];
 
 /**

@@ -33,6 +33,39 @@ contextBridge.exposeInMainWorld('langgraph', {
   clearSession: (ideaId: string) => ipcRenderer.invoke('langgraph:clearSession', ideaId),
 })
 
+// --------- Expose APIs ---------
+contextBridge.exposeInMainWorld('electron', {
+  // Audio API
+  audio: {
+    saveAudioFile: (audioData: Buffer, originalName?: string, mimeType?: string) => 
+      ipcRenderer.invoke('audio:save-file', audioData, originalName, mimeType),
+    
+    convertAudioFile: (inputPath: string, options?: any) => 
+      ipcRenderer.invoke('audio:convert-file', inputPath, options),
+    
+    getAudioFileInfo: (filePath: string) => 
+      ipcRenderer.invoke('audio:get-file-info', filePath),
+    
+    deleteAudioFile: (filePath: string) => 
+      ipcRenderer.invoke('audio:delete-file', filePath),
+    
+    cleanupOldFiles: (maxAge?: number) => 
+      ipcRenderer.invoke('audio:cleanup-old-files', maxAge),
+    
+    getTempDirectory: () => 
+      ipcRenderer.invoke('audio:get-temp-directory'),
+    
+    getActiveFiles: () => 
+      ipcRenderer.invoke('audio:get-active-files')
+  },
+
+  // Environment Variables API
+  env: {
+    getVars: () => 
+      ipcRenderer.invoke('env:get-vars')
+  }
+})
+
 // --------- Preload scripts loading ---------
 function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
   return new Promise(resolve => {

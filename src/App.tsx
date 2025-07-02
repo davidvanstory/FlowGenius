@@ -11,6 +11,7 @@ import { IdeaEntity } from './types/AppState';
 import { logger } from './utils/logger';
 import { LangGraphProvider, useLangGraph, useSendMessage, useSessionManagement } from './hooks/useLangGraph';
 import { useAudioRecording } from './hooks/useAudioRecording';
+import { createWhisperService, WhisperService } from './services/whisperService';
 import Sidebar from './components/Sidebar';
 import Chat from './components/Chat';
 import InputBar from './components/InputBar';
@@ -69,6 +70,10 @@ function AppInner() {
   // Input state for the message input bar
   const [inputValue, setInputValue] = useState('');
 
+  // WhisperService instance for audio transcription
+  const [whisperService, setWhisperService] = useState<WhisperService | null>(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+
   // Mock sessions data - will be replaced with real database data
   const [sessions, setSessions] = useState<IdeaEntity[]>(() => 
     createMockSessions(langGraphState.appState.idea_id)
@@ -76,21 +81,130 @@ function AppInner() {
 
   // Extract current app state from LangGraph context
   const appState = langGraphState.appState;
-  const isProcessing = langGraphState.isExecuting || isSendingMessage;
+  const isProcessing = langGraphState.isExecuting || isSendingMessage || isTranscribing;
   const currentError = langGraphState.error || sendMessageError;
 
-  // Audio recording hook
-  const audioRecording = useAudioRecording((audioBlob, duration) => {
-    logger.info('🎤 Audio recording completed in App', { 
+  // Initialize WhisperService on component mount
+  useEffect(() => {
+    async function initializeWhisperService() {
+      logger.info('🎤 Initializing WhisperService for voice transcription');
+      
+      try {
+        const service = await createWhisperService();
+        setWhisperService(service);
+        
+        logger.info('✅ WhisperService initialized successfully');
+        
+        // Test connection to verify API key
+        try {
+          const result = await service.testConnection();
+          if (result.success) {
+            logger.info('🔗 OpenAI API connection verified');
+          } else {
+            logger.warn('⚠️ OpenAI API connection test failed', { error: result.error });
+          }
+        } catch (error) {
+          logger.warn('⚠️ OpenAI API connection test error', { 
+            error: error instanceof Error ? error.message : String(error) 
+          });
+        }
+        
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        logger.error('❌ Failed to initialize WhisperService', { error: errorMsg });
+        
+        // Don't block the app, just disable voice features
+        if (errorMsg.includes('OPENAI_API_KEY')) {
+          logger.warn('🔑 Voice transcription disabled - OpenAI API key not configured');
+          logger.info('💡 To enable voice features: Set your OpenAI API key in the .env file');
+        }
+      }
+    }
+
+    initializeWhisperService();
+  }, []);
+
+  // Audio recording hook with WhisperService integration
+  const audioRecording = useAudioRecording(async (audioBlob, duration) => {
+    logger.info('🎤 Audio recording completed, starting transcription', { 
       blobSize: audioBlob.size, 
       duration,
       mimeType: audioBlob.type 
     });
     
-    // For now, just log the recording - will be integrated with Whisper API in task 5.5
-    // TODO: Send audioBlob to Whisper API for transcription
-    const placeholderMessage = `[Voice recording: ${duration}s - Transcription will be implemented in task 5.5]`;
-    handleSendMessage(placeholderMessage);
+    // Check if WhisperService is available
+    if (!whisperService) {
+      logger.warn('⚠️ WhisperService not available, using placeholder message');
+      const placeholderMessage = `[Voice recording: ${duration}s - WhisperService not initialized]`;
+      await handleSendMessage(placeholderMessage);
+      return;
+    }
+
+    setIsTranscribing(true);
+    
+    try {
+      logger.info('🔄 Starting audio transcription with Whisper API', {
+        blobSize: audioBlob.size,
+        duration,
+        mimeType: audioBlob.type
+      });
+
+      // Transcribe the audio using WhisperService
+      const transcriptionResult = await whisperService.transcribeBlob(audioBlob, {
+        responseFormat: 'text',
+        language: 'en', // Auto-detect if not specified
+        temperature: 0.2, // Lower temperature for more consistent transcription
+        prompt: 'This is a voice message for an AI assistant conversation.'
+      });
+
+      if (transcriptionResult.success && transcriptionResult.data?.text) {
+        const transcribedText = transcriptionResult.data.text.trim();
+        
+        logger.info('✅ Audio transcription completed successfully', {
+          transcriptionLength: transcribedText.length,
+          duration: transcriptionResult.duration,
+          retryCount: transcriptionResult.retryCount
+        });
+
+        // Log the transcription for debugging
+        logger.debug('📝 Transcribed text', { text: transcribedText });
+
+        // Send the transcribed text as a message
+        if (transcribedText) {
+          await handleSendMessage(transcribedText);
+        } else {
+          logger.warn('⚠️ Transcription was empty, sending placeholder');
+          await handleSendMessage(`[Voice recording: ${duration}s - No speech detected]`);
+        }
+
+      } else {
+        // Handle transcription failure
+        const errorMsg = transcriptionResult.error || 'Unknown transcription error';
+        logger.error('❌ Audio transcription failed', { 
+          error: errorMsg,
+          duration: transcriptionResult.duration,
+          retryCount: transcriptionResult.retryCount
+        });
+
+        // Send error message to chat
+        const errorMessage = `[Voice recording: ${duration}s - Transcription failed: ${errorMsg}]`;
+        await handleSendMessage(errorMessage);
+      }
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('❌ Unexpected error during audio transcription', { 
+        error: errorMsg,
+        duration 
+      });
+
+      // Send error message to chat
+      const errorMessage = `[Voice recording: ${duration}s - Transcription error: ${errorMsg}]`;
+      await handleSendMessage(errorMessage);
+
+    } finally {
+      setIsTranscribing(false);
+    }
   });
 
   /**

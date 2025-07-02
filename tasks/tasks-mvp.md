@@ -101,8 +101,8 @@
   - [x] 5.1 Create AudioRecorder component using MediaRecorder API with proper browser compatibility
   - [x] 5.2 Implement microphone permission handling with user-friendly prompts
   - [ ] 5.3 Add visual feedback during recording (blue ebbing microphone icon like GPT-4o)
-  - [ ] 5.4 Create audio format validation and conversion utilities (ensure Whisper API compatibility)
-  - [ ] 5.5 Build WhisperService for handling API calls with proper error handling and retries
+  - [x] 5.4 Create audio format validation and conversion utilities (ensure Whisper API compatibility)
+  - [x] 5.5 Build WhisperService for handling API calls with proper error handling and retries
   - [ ] 5.6 Integrate V2T functionality as a LangGraph node
   - [ ] 5.7 Add recording duration limits and progress indicators
   - [ ] 5.8 Create comprehensive error handling for audio recording failures

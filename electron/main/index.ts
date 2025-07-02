@@ -1,11 +1,16 @@
+import { config } from 'dotenv'
 import { app, BrowserWindow, shell, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
 import { update } from './update'
 import { initializeLangGraphHandlers, cleanupLangGraphHandlers } from './langgraph-handler'
+import { initializeAudioSystem, cleanupAudioHandlers } from './audio-ipc-handlers'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Load environment variables from .env file
+config({ path: path.join(__dirname, '../../.env') });
 
 // The built directory structure
 //
@@ -80,9 +85,20 @@ async function createWindow() {
   update(win)
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Initialize environment variables IPC handler
+  initializeEnvironmentHandlers()
+  
   // Initialize LangGraph IPC handlers
   initializeLangGraphHandlers()
+  
+  // Initialize Audio system
+  try {
+    await initializeAudioSystem()
+    console.log('✅ Audio system initialized')
+  } catch (error) {
+    console.error('❌ Failed to initialize audio system:', error)
+  }
   
   // Create main window
   createWindow()
@@ -93,6 +109,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     // Cleanup LangGraph handlers before quitting
     cleanupLangGraphHandlers()
+    // Cleanup Audio handlers before quitting
+    cleanupAudioHandlers()
     app.quit()
   }
 })
@@ -113,6 +131,60 @@ app.on('activate', () => {
     createWindow()
   }
 })
+
+/**
+ * Initialize environment variables IPC handlers
+ * Provides secure access to environment variables from renderer process
+ */
+function initializeEnvironmentHandlers(): void {
+  console.log('🔐 Initializing environment variable IPC handlers');
+
+  /**
+   * Get environment variables needed by renderer process
+   * Only exposes necessary environment variables for security
+   */
+  ipcMain.handle('env:get-vars', async () => {
+    try {
+      console.log('📨 IPC: Getting environment variables');
+
+      // Only expose the environment variables that are actually needed
+      // This is a security best practice - never expose all process.env
+      const envVars = {
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+        NODE_ENV: process.env.NODE_ENV,
+        // Add other necessary env vars here as needed
+        SUPABASE_URL: process.env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+      };
+
+      console.log('✅ IPC: Environment variables retrieved', {
+        hasOpenAIKey: !!envVars.OPENAI_API_KEY,
+        nodeEnv: envVars.NODE_ENV,
+        hasSupabaseUrl: !!envVars.SUPABASE_URL,
+        hasSupabaseKey: !!envVars.SUPABASE_ANON_KEY
+      });
+
+      return {
+        success: true,
+        data: envVars
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      console.error('❌ IPC: Failed to get environment variables', {
+        error: errorMessage
+      });
+
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  });
+
+  console.log('✅ Environment variable IPC handlers initialized');
+}
 
 // New window example arg: new windows url
 ipcMain.handle('open-win', (_, arg) => {
