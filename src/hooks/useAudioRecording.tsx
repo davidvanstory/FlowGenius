@@ -151,6 +151,26 @@ export function useAudioRecording(
       mimeType: audioBlob.type 
     });
     
+    // Create a URL for the audio blob to enable playback
+    const audioUrl = URL.createObjectURL(audioBlob);
+    logger.info('🔊 Audio playback URL created', { url: audioUrl });
+    
+    // Create an audio element to play the recording
+    const audio = new Audio(audioUrl);
+    audio.volume = 0.7;
+    
+    // Log when audio plays
+    audio.onplay = () => logger.info('▶️ Playing back recorded audio');
+    audio.onended = () => {
+      logger.info('⏹️ Audio playback finished');
+      URL.revokeObjectURL(audioUrl); // Clean up the URL
+    };
+    
+    // Play the audio automatically for testing
+    audio.play().catch(err => {
+      logger.error('❌ Failed to play audio', { error: err.message });
+    });
+    
     setState(prev => ({
       ...prev,
       recordingState: RecordingState.IDLE,
@@ -213,13 +233,8 @@ export function useAudioRecording(
       isPermissionDialogOpen: false,
       errorMessage: null,
       showTroubleshooting: false,
-      recordingState: RecordingState.IDLE // Ready to start recording
+      recordingState: RecordingState.REQUESTING_PERMISSION // This will show the AudioRecorder
     }));
-    
-    // Automatically trigger recording after permission is granted
-    setTimeout(() => {
-      setState(prev => ({ ...prev, recordingState: RecordingState.IDLE }));
-    }, 100);
   }, []);
 
   /**

@@ -309,19 +309,20 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
           type: mimeType || audioConfig.mimeType 
         });
         
-        const duration = recordingDuration;
+        // Calculate actual duration from timestamps
+        const actualDuration = Math.floor((Date.now() - recordingStartTimeRef.current) / 1000);
         
         logger.info('✅ AudioRecorder: Recording completed', {
           blobSize: audioBlob.size,
-          duration,
+          duration: actualDuration,
           mimeType: audioBlob.type
         });
 
         // Clean up
         cleanupRecording();
         
-        // Notify completion
-        onRecordingComplete(audioBlob, duration);
+        // Notify completion with actual duration
+        onRecordingComplete(audioBlob, actualDuration);
         updateRecordingState(RecordingState.IDLE);
       };
 

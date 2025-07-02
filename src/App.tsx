@@ -14,7 +14,7 @@ import { useAudioRecording } from './hooks/useAudioRecording';
 import Sidebar from './components/Sidebar';
 import Chat from './components/Chat';
 import InputBar from './components/InputBar';
-import { AudioRecorder } from './components/AudioRecorder';
+import { AudioRecorder, RecordingState } from './components/AudioRecorder';
 import { PermissionDialog } from './components/PermissionDialog';
 import './App.css';
 
@@ -344,14 +344,9 @@ function AppInner() {
               disabled={isProcessing}
             />
             
-            {/* Audio Recorder Modal (shows when has permission) */}
-            {audioRecording.hasPermission && (
-              <div 
-                className="audio-recorder-modal"
-                style={{ 
-                  display: audioRecording.recordingState === 'idle' ? 'none' : 'block' 
-                }}
-              >
+            {/* Audio Recorder Modal (shows when recording is active) */}
+            {audioRecording.hasPermission && audioRecording.recordingState !== RecordingState.IDLE && (
+              <div className="audio-recorder-modal">
                 <AudioRecorder
                   onRecordingComplete={audioRecording.handleRecordingComplete}
                   onRecordingError={audioRecording.handleRecordingError}
