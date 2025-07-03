@@ -510,10 +510,10 @@ export function parseDuration(duration: number | string): number {
   
   if (parts.length === 2) {
     // mm:ss format
-    return (parseInt(parts[0] || '0') || 0) * 60 + (parseInt(parts[1] || '0') || 0);
+    return (parseInt(String(parts[0] || 0)) || 0) * 60 + (parseInt(String(parts[1] || 0)) || 0);
   } else if (parts.length === 3) {
     // hh:mm:ss format
-    return (parseInt(parts[0] || '0') || 0) * 3600 + (parseInt(parts[1] || '0') || 0) * 60 + (parseInt(parts[2] || '0') || 0);
+    return (parseInt(String(parts[0] || 0)) || 0) * 3600 + (parseInt(String(parts[1] || 0)) || 0) * 60 + (parseInt(String(parts[2] || 0)) || 0);
   } else {
     // Invalid colon format (like 1:2:3:4)
     return 0;

@@ -138,7 +138,8 @@ export class StateQuery {
       'chat': false,
       'Brainstorm Done': state.current_stage === 'brainstorm',
       'Summary Done': state.current_stage === 'summary',
-      'PRD Done': state.current_stage === 'prd'
+      'PRD Done': state.current_stage === 'prd',
+      'Market Research Done': state.current_stage === 'market_research'
     };
 
     return actionToStageMap[state.last_user_action] || false;

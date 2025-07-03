@@ -19,7 +19,7 @@ export interface ChatMessage {
   /** Timestamp when the message was created */
   created_at?: Date;
   /** Which stage the message was created in for context */
-  stage_at_creation?: 'brainstorm' | 'summary' | 'prd';
+  stage_at_creation?: 'brainstorm' | 'summary' | 'prd' | 'market_research';
 }
 
 /**
@@ -139,12 +139,12 @@ export interface SelectedModels {
 /**
  * Represents the current stage of the workflow
  */
-export type WorkflowStage = 'brainstorm' | 'summary' | 'prd';
+export type WorkflowStage = 'brainstorm' | 'summary' | 'prd' | 'market_research';
 
 /**
  * Represents the last action taken by the user
  */
-export type UserAction = 'chat' | 'Brainstorm Done' | 'Summary Done' | 'PRD Done';
+export type UserAction = 'chat' | 'Brainstorm Done' | 'Summary Done' | 'PRD Done' | 'Market Research Done';
 
 /**
  * Voice transcription status and result data
@@ -347,8 +347,8 @@ export function validateAppState(state: any): state is AppState {
     typeof state === 'object' &&
     typeof state.idea_id === 'string' &&
     Array.isArray(state.messages) &&
-    ['brainstorm', 'summary', 'prd'].includes(state.current_stage) &&
-    ['chat', 'Brainstorm Done', 'Summary Done', 'PRD Done'].includes(state.last_user_action) &&
+    ['brainstorm', 'summary', 'prd', 'market_research'].includes(state.current_stage) &&
+    ['chat', 'Brainstorm Done', 'Summary Done', 'PRD Done', 'Market Research Done'].includes(state.last_user_action) &&
     typeof state.user_prompts === 'object' &&
     typeof state.selected_models === 'object'
   );

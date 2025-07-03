@@ -154,14 +154,16 @@ function initializeEnvironmentHandlers(): void {
         NODE_ENV: process.env.NODE_ENV,
         // Add other necessary env vars here as needed
         SUPABASE_URL: process.env.SUPABASE_URL,
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+        TAVILY_API_KEY: process.env.TAVILY_API_KEY
       };
 
       console.log('✅ IPC: Environment variables retrieved', {
         hasOpenAIKey: !!envVars.OPENAI_API_KEY,
         nodeEnv: envVars.NODE_ENV,
         hasSupabaseUrl: !!envVars.SUPABASE_URL,
-        hasSupabaseKey: !!envVars.SUPABASE_ANON_KEY
+        hasSupabaseKey: !!envVars.SUPABASE_ANON_KEY,
+        hasTavilyKey: !!envVars.TAVILY_API_KEY
       });
 
       return {

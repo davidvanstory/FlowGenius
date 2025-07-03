@@ -668,11 +668,14 @@ export class WhisperService {
   /**
    * Get file extension from MIME type
    * 
-   * @param mimeType - MIME type
+   * @param mimeType - MIME type (may be undefined)
    * @returns File extension
    */
-  private getExtensionFromMimeType(mimeType: string): string {
+  private getExtensionFromMimeType(mimeType: string | undefined): string {
     // Clean MIME type by removing codec information
+    if (!mimeType) {
+      return 'wav'; // Default extension
+    }
     const cleanMimeType = mimeType.toLowerCase().split(';')[0].trim();
     
     const mimeMap: Record<string, string> = {

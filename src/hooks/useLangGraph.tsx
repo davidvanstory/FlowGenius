@@ -411,7 +411,8 @@ export function LangGraphProvider({ children }: { children: React.ReactNode }) {
     const stageActions: Record<WorkflowStage, UserAction> = {
       brainstorm: 'Brainstorm Done',
       summary: 'Summary Done',
-      prd: 'PRD Done'
+      prd: 'PRD Done',
+      market_research: 'Market Research Done'
     };
 
     const updatedState: AppState = {

@@ -18,6 +18,7 @@ import { AppStateAnnotation, createInitialLangGraphState } from './state';
 import { processUserTurn } from './nodes/processUserTurn';
 import { processVoiceInput } from './nodes/processVoiceInput';
 import { generateSummary } from './nodes/generateSummary';
+import { evaluateMarketLandscape } from './nodes/evaluateMarketLandscape';
 import { routeUserAction, RouteNames } from './router';
 import { AppState } from '../../../src/types/AppState';
 import { logger } from '../../../src/utils/logger';
@@ -40,6 +41,7 @@ export function createFlowGeniusWorkflow() {
     .addNode(RouteNames.PROCESS_USER_TURN, processUserTurn)
     .addNode(RouteNames.PROCESS_VOICE_INPUT, processVoiceInput)
     .addNode(RouteNames.GENERATE_SUMMARY, generateSummary)
+    .addNode(RouteNames.EVALUATE_MARKET_LANDSCAPE, evaluateMarketLandscape)
     
     // Set up entry point routing
     .addEdge(START, RouteNames.PROCESS_USER_TURN)
@@ -52,6 +54,7 @@ export function createFlowGeniusWorkflow() {
         [RouteNames.PROCESS_USER_TURN]: RouteNames.PROCESS_USER_TURN,
         [RouteNames.PROCESS_VOICE_INPUT]: RouteNames.PROCESS_VOICE_INPUT,
         [RouteNames.GENERATE_SUMMARY]: RouteNames.GENERATE_SUMMARY,
+        [RouteNames.EVALUATE_MARKET_LANDSCAPE]: RouteNames.EVALUATE_MARKET_LANDSCAPE,
         [RouteNames.END]: END
       }
     )
@@ -64,6 +67,7 @@ export function createFlowGeniusWorkflow() {
         [RouteNames.PROCESS_USER_TURN]: RouteNames.PROCESS_USER_TURN,
         [RouteNames.PROCESS_VOICE_INPUT]: RouteNames.PROCESS_VOICE_INPUT,
         [RouteNames.GENERATE_SUMMARY]: RouteNames.GENERATE_SUMMARY,
+        [RouteNames.EVALUATE_MARKET_LANDSCAPE]: RouteNames.EVALUATE_MARKET_LANDSCAPE,
         [RouteNames.END]: END
       }
     )
@@ -71,6 +75,17 @@ export function createFlowGeniusWorkflow() {
     // Add conditional routing from generateSummary
     .addConditionalEdges(
       RouteNames.GENERATE_SUMMARY,
+      routeUserAction,
+      {
+        [RouteNames.PROCESS_USER_TURN]: RouteNames.PROCESS_USER_TURN,
+        [RouteNames.EVALUATE_MARKET_LANDSCAPE]: RouteNames.EVALUATE_MARKET_LANDSCAPE,
+        [RouteNames.END]: END
+      }
+    )
+    
+    // Add conditional routing from evaluateMarketLandscape
+    .addConditionalEdges(
+      RouteNames.EVALUATE_MARKET_LANDSCAPE,
       routeUserAction,
       {
         [RouteNames.PROCESS_USER_TURN]: RouteNames.PROCESS_USER_TURN,
@@ -83,7 +98,7 @@ export function createFlowGeniusWorkflow() {
   
   console.log('✅ FlowGenius LangGraph workflow created successfully');
   logger.info('LangGraph workflow compiled', {
-    nodeCount: 3,
+    nodeCount: 4,
     hasConditionalRouting: true,
     entryPoint: RouteNames.PROCESS_USER_TURN
   });
@@ -212,7 +227,7 @@ export function validateWorkflowState(state: AppState): {
     issues.push('Missing idea_id');
   }
   
-  if (!state.current_stage || !['brainstorm', 'summary', 'prd'].includes(state.current_stage)) {
+  if (!state.current_stage || !['brainstorm', 'summary', 'prd', 'market_research'].includes(state.current_stage)) {
     issues.push('Invalid current_stage');
   }
   

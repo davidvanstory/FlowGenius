@@ -19,6 +19,7 @@ export enum RouteNames {
   PROCESS_USER_TURN = 'processUserTurn',
   PROCESS_VOICE_INPUT = 'processVoiceInput',
   GENERATE_SUMMARY = 'generateSummary',
+  EVALUATE_MARKET_LANDSCAPE = 'evaluateMarketLandscape',
   GENERATE_PRD = 'generatePRD',
   END = '__end__'
 }
@@ -75,8 +76,21 @@ export function routeUserAction(state: AppState): string {
     return RouteNames.PROCESS_VOICE_INPUT;
   }
 
-  // Check if the last message is from assistant and no new user input
+  // Check for automatic market research trigger after summary generation
   const lastMessage = state.messages[state.messages.length - 1];
+  if (lastMessage && 
+      lastMessage.role === 'assistant' && 
+      lastMessage.stage_at_creation === 'summary' &&
+      lastMessage.content.includes('Ireland is great') &&
+      state.current_stage === 'summary' &&
+      !state.messages.some(msg => msg.stage_at_creation === 'market_research')) {
+    logger.info('Routing to evaluateMarketLandscape after summary completion', {
+      idea_id: state.idea_id
+    });
+    return RouteNames.EVALUATE_MARKET_LANDSCAPE;
+  }
+
+  // Check if the last message is from assistant and no new user input
   if (lastMessage && lastMessage.role === 'assistant' && state.last_user_action === 'chat') {
     logger.info('Routing to END - waiting for user input', {
       idea_id: state.idea_id,
@@ -187,7 +201,12 @@ export function shouldTransitionStage(state: AppState): boolean {
       return state.last_user_action === 'Brainstorm Done';
     
     case 'summary':
-      // Transition to PRD when user clicks "Summary Done"
+      // Transition to market research automatically after summary generation
+      // Then to PRD when user clicks "Summary Done"
+      return state.last_user_action === 'Summary Done';
+    
+    case 'market_research':
+      // Transition to PRD when user clicks "Summary Done" 
       return state.last_user_action === 'Summary Done';
     
     case 'prd':
@@ -228,6 +247,8 @@ export function getRoutingDescription(state: AppState): string {
       return 'Processing voice input for transcription';
     case RouteNames.GENERATE_SUMMARY:
       return 'Generating summary of brainstorming session';
+    case RouteNames.EVALUATE_MARKET_LANDSCAPE:
+      return 'Evaluating market landscape and competitive analysis';
     case RouteNames.GENERATE_PRD:
       return 'Generating Product Requirements Document';
     case RouteNames.END:

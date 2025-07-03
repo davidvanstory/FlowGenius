@@ -15,6 +15,7 @@ interface RequiredEnvVars {
   OPENAI_API_KEY: string;
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
+  TAVILY_API_KEY: string;
 }
 
 /**
@@ -45,7 +46,8 @@ interface ValidationResult {
 const REQUIRED_ENV_VARS: (keyof RequiredEnvVars)[] = [
   'OPENAI_API_KEY',
   'SUPABASE_URL',
-  'SUPABASE_ANON_KEY'
+  'SUPABASE_ANON_KEY',
+  'TAVILY_API_KEY'
 ];
 
 /**
@@ -191,6 +193,12 @@ export function validateEnvironmentVariables(): ValidationResult {
         case 'SUPABASE_ANON_KEY':
           if (!isValidApiKey(value)) {
             errors.push(`Invalid Supabase anonymous key format`);
+          }
+          break;
+          
+        case 'TAVILY_API_KEY':
+          if (!isValidApiKey(value, 'tvly-')) {
+            errors.push(`Invalid Tavily API key format. Expected to start with 'tvly-'`);
           }
           break;
       }

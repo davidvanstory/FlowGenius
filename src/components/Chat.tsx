@@ -67,6 +67,7 @@ const Message = ({ message, index, onAction }: MessageProps) => {
       brainstorm: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
       summary: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
       prd: 'bg-green-500/10 text-green-400 border-green-500/20',
+      market_research: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
     };
     return styles[message.stage_at_creation || 'brainstorm'];
   }, [message.stage_at_creation]);
