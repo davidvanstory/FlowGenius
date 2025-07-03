@@ -101,8 +101,8 @@ const Message = ({ message, index, onAction }: MessageProps) => {
       ref={messageRef}
       className={`
         group relative flex gap-4 px-4 py-6 transition-colors duration-200
-        ${isUser ? 'bg-transparent' : 'bg-gray-50/50'}
-        hover:bg-gray-50/80
+        ${isUser ? 'bg-white' : 'bg-gray-50'}
+        hover:bg-gray-100/60
       `}
       role="article"
       aria-label={`${message.role} message`}
@@ -127,11 +127,11 @@ const Message = ({ message, index, onAction }: MessageProps) => {
       <div className="flex-1 min-w-0 space-y-3">
         {/* Message Header */}
         <div className="flex items-center gap-2 text-sm">
-          <span className="font-medium text-gray-900">
+          <span className="font-medium text-gray-800">
             {isUser ? 'You' : 'FlowGenius'}
           </span>
           {formattedTime && (
-            <span className="text-gray-500">{formattedTime}</span>
+            <span className="text-gray-600">{formattedTime}</span>
           )}
           {message.stage_at_creation && (
             <span className={`
@@ -146,13 +146,13 @@ const Message = ({ message, index, onAction }: MessageProps) => {
         {/* Message Text */}
         <div
           className={`
-            prose prose-sm max-w-none text-gray-900 leading-relaxed
+            prose prose-sm max-w-none leading-relaxed
             ${isUser ? 'prose-emerald' : 'prose-gray'}
           `}
         >
           {/* Handle line breaks and basic formatting */}
           {message.content.split('\n').map((line, lineIndex) => (
-            <p key={lineIndex} className={lineIndex === 0 ? 'mt-0' : ''}>
+            <p key={lineIndex} className={`${lineIndex === 0 ? 'mt-0' : ''} text-gray-800 font-normal`}>
               {line || '\u00A0'} {/* Non-breaking space for empty lines */}
             </p>
           ))}
@@ -213,7 +213,7 @@ const Message = ({ message, index, onAction }: MessageProps) => {
  * Typing indicator component for when AI is processing
  */
 const TypingIndicator = () => (
-  <div className="flex gap-4 px-4 py-6 bg-gray-50/50">
+  <div className="flex gap-4 px-4 py-6 bg-gray-50">
     <div className="flex-shrink-0">
       <div className="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center text-sm font-semibold">
         AI
@@ -221,8 +221,8 @@ const TypingIndicator = () => (
     </div>
     <div className="flex-1 min-w-0 space-y-3">
       <div className="flex items-center gap-2 text-sm">
-        <span className="font-medium text-gray-900">FlowGenius</span>
-        <span className="text-gray-500">is typing...</span>
+        <span className="font-medium text-gray-800">FlowGenius</span>
+        <span className="text-gray-600">is typing...</span>
       </div>
       <div className="flex items-center gap-1">
         {[0, 1, 2].map((i) => (

@@ -36,10 +36,10 @@
   - [x] 2.1 Remove stage badge display from SessionItem component in Sidebar.tsx
   - [x] 2.2 Remove stage filtering from session search functionality
   - [x] 2.3 Clean up session display to show only title and date
-- [ ] 3.0 Improve Main Chat Text Legibility and Contrast
-  - [ ] 3.1 Update message text colors in Chat.tsx for better contrast
-  - [ ] 3.2 Improve chat background colors in components.css
-  - [ ] 3.3 Update gray text colors to meet accessibility standards
+- [x] 3.0 Improve Main Chat Text Legibility and Contrast
+  - [x] 3.1 Update message text colors in Chat.tsx for better contrast
+  - [x] 3.2 Improve chat background colors in components.css
+  - [x] 3.3 Update gray text colors to meet accessibility standards
 - [ ] 4.0 Streamline Audio Recording to Single Click
   - [ ] 4.1 Modify useAudioRecording hook to skip permission dialog when permission already granted
   - [ ] 4.2 Update InputBar microphone button to start recording immediately
