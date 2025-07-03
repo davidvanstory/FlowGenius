@@ -348,7 +348,7 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
         <div className="dialog-content">
           <div id="permission-dialog-description" className="dialog-description">
             <p>
-              FlowGenius needs access to your microphone to record voice messages. 
+              Deep Thinker needs access to your microphone to record voice messages. 
               Your audio is processed securely and never stored permanently.
             </p>
           </div>

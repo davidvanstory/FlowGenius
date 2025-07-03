@@ -422,21 +422,68 @@ function AppInner() {
               disabled={isProcessing}
             />
             
-            {/* Audio Recorder Modal (shows when recording is active) */}
-            {audioRecording.hasPermission && audioRecording.recordingState !== RecordingState.IDLE && (
-              <div className="audio-recorder-modal">
+            {/* Hidden AudioRecorder for background recording functionality */}
+            {audioRecording.hasPermission && (
+              <div style={{ 
+                position: 'absolute', 
+                left: '-9999px', 
+                top: '-9999px', 
+                visibility: 'hidden',
+                pointerEvents: 'none'
+              }}>
                 <AudioRecorder
-                  onRecordingComplete={audioRecording.handleRecordingComplete}
-                  onRecordingError={audioRecording.handleRecordingError}
-                  onStateChange={audioRecording.handleRecordingStateChange}
+                  onRecordingComplete={(audioBlob, duration) => {
+                    logger.info('🎤 AudioRecorder completed recording', { blobSize: audioBlob.size, duration });
+                    audioRecording.handleRecordingComplete(audioBlob, duration);
+                  }}
+                  onRecordingError={(error) => {
+                    logger.error('❌ AudioRecorder error', { error });
+                    audioRecording.handleRecordingError(error);
+                  }}
+                  onStateChange={(state) => {
+                    logger.info('🔄 AudioRecorder state change', { 
+                      from: audioRecording.recordingState,
+                      to: state,
+                      stopSignal: audioRecording.stopSignal
+                    });
+                    audioRecording.handleRecordingStateChange(state);
+                  }}
                   disabled={isProcessing}
-                  autoStart={false}
+                  autoStart={audioRecording.recordingState === RecordingState.RECORDING}
+                  showVisualFeedback={false}
+                  stopSignal={audioRecording.stopSignal}
                 />
               </div>
             )}
           </div>
         </main>
       </div>
+
+      {/* Non-intrusive Recording Indicator */}
+      {audioRecording.recordingState === RecordingState.RECORDING && (
+        <div className="recording-indicator-overlay">
+          <div className="recording-indicator">
+            <div className="recording-pulse"></div>
+            <span className="recording-text">🎤 Recording...</span>
+            <button 
+              className="stop-recording-btn"
+              onClick={() => {
+                logger.info('🛑 Stop recording button clicked', {
+                  currentRecordingState: audioRecording.recordingState,
+                  currentStopSignal: audioRecording.stopSignal
+                });
+                audioRecording.stopRecording();
+                logger.info('🛑 Stop recording called, new stopSignal should be:', { 
+                  expectedStopSignal: audioRecording.stopSignal + 1 
+                });
+              }}
+              title="Stop recording"
+            >
+              ⏹️
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Permission Dialog */}
       <PermissionDialog

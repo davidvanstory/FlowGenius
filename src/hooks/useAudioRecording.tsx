@@ -36,6 +36,8 @@ interface AudioRecordingState {
   lastRecording: Blob | null;
   /** Duration of the last recording in seconds */
   lastRecordingDuration: number;
+  /** Stop signal for external components */
+  stopSignal: number;
 }
 
 /**
@@ -44,6 +46,8 @@ interface AudioRecordingState {
 interface UseAudioRecordingReturn extends AudioRecordingState {
   /** Start or request to start recording */
   startRecording: () => void;
+  /** Stop current recording */
+  stopRecording: () => void;
   /** Handle recording completion */
   handleRecordingComplete: (audioBlob: Blob, duration: number) => void;
   /** Handle recording error */
@@ -79,7 +83,8 @@ export function useAudioRecording(
     errorMessage: null,
     showTroubleshooting: false,
     lastRecording: null,
-    lastRecordingDuration: 0
+    lastRecordingDuration: 0,
+    stopSignal: 0
   });
 
   /**
@@ -89,25 +94,41 @@ export function useAudioRecording(
     try {
       logger.debug('🔍 Checking microphone permission status');
       
-      // Try to check permission status first
-      if (navigator.permissions && 'microphone' in navigator.permissions) {
-        const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-        const isGranted = permission.state === 'granted';
+      // Try to access microphone directly first - this is more reliable
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
+        });
         
-        logger.info('📊 Permission check result', { state: permission.state, isGranted });
+        // If we get here, permission is granted
+        stream.getTracks().forEach(track => track.stop()); // Clean up immediately
         
-        setState(prev => ({ ...prev, hasPermission: isGranted }));
-        return isGranted;
+        logger.info('✅ Microphone permission confirmed - direct access successful');
+        setState(prev => ({ ...prev, hasPermission: true }));
+        return true;
+        
+      } catch (directAccessError) {
+        // Direct access failed, check permission state
+        if (navigator.permissions && 'microphone' in navigator.permissions) {
+          const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          const isGranted = permission.state === 'granted';
+          
+          logger.info('📊 Permission state check result', { state: permission.state, isGranted });
+          setState(prev => ({ ...prev, hasPermission: isGranted }));
+          return isGranted;
+        }
+        
+        // No permission API, assume permission needed
+        logger.warn('⚠️ Direct access failed and no Permissions API, will request permission');
+        setState(prev => ({ ...prev, hasPermission: false }));
+        return false;
       }
-      
-      // Fallback: assume we need to request permission
-      logger.warn('⚠️ Permissions API not available, will request permission');
-      return false;
       
     } catch (error) {
       logger.error('❌ Error checking permission', { 
         error: error instanceof Error ? error.message : String(error) 
       });
+      setState(prev => ({ ...prev, hasPermission: false }));
       return false;
     }
   }, []);
@@ -132,11 +153,11 @@ export function useAudioRecording(
         showTroubleshooting: false 
       }));
     } else {
-      logger.info('✅ Permission already granted, triggering recording');
+      logger.info('✅ Permission already granted, starting recording immediately');
       setState(prev => ({ 
         ...prev, 
         hasPermission: true,
-        recordingState: RecordingState.REQUESTING_PERMISSION // This will show the AudioRecorder
+        recordingState: RecordingState.RECORDING // Skip intermediate state, go directly to recording
       }));
     }
   }, [checkPermission]);
@@ -227,7 +248,7 @@ export function useAudioRecording(
    * Handle permission granted
    */
   const handlePermissionGranted = useCallback(() => {
-    logger.info('✅ Microphone permission granted');
+    logger.info('✅ Microphone permission granted, starting recording immediately');
     
     setState(prev => ({
       ...prev,
@@ -235,7 +256,7 @@ export function useAudioRecording(
       isPermissionDialogOpen: false,
       errorMessage: null,
       showTroubleshooting: false,
-      recordingState: RecordingState.REQUESTING_PERMISSION // This will show the AudioRecorder
+      recordingState: RecordingState.RECORDING // Start recording immediately after permission granted
     }));
   }, []);
 
@@ -291,13 +312,43 @@ export function useAudioRecording(
       errorMessage: null,
       showTroubleshooting: false,
       lastRecording: null,
-      lastRecordingDuration: 0
+      lastRecordingDuration: 0,
+      stopSignal: 0
+    });
+  }, []);
+
+  /**
+   * Stop current recording
+   */
+  const stopRecording = useCallback(() => {
+    setState(prev => {
+      logger.info('🛑 Stop recording requested from hook', {
+        currentState: prev.recordingState,
+        currentStopSignal: prev.stopSignal
+      });
+      
+      if (prev.recordingState === RecordingState.RECORDING) {
+        logger.info('✅ State is RECORDING, incrementing stopSignal', {
+          from: prev.stopSignal,
+          to: prev.stopSignal + 1
+        });
+        return {
+          ...prev,
+          stopSignal: prev.stopSignal + 1
+        };
+      } else {
+        logger.warn('⚠️ Cannot stop recording - not in RECORDING state', {
+          currentState: prev.recordingState
+        });
+        return prev;
+      }
     });
   }, []);
 
   return {
     ...state,
     startRecording,
+    stopRecording,
     handleRecordingComplete,
     handleRecordingError,
     handleRecordingStateChange,

@@ -676,3 +676,80 @@ input:focus-visible {
 .chat-content::-webkit-scrollbar-thumb:hover {
   background: #4d4d4f;
 }
+
+/* Recording Indicator Styles */
+.recording-indicator-overlay {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(220, 38, 38, 0.95);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 9999px;
+  box-shadow: 0 10px 25px rgba(220, 38, 38, 0.3);
+  backdrop-filter: blur(10px);
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+.recording-pulse {
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  border-radius: 50%;
+  animation: recordingPulse 1.5s ease-in-out infinite;
+}
+
+.recording-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.stop-recording-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.stop-recording-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+@keyframes recordingPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

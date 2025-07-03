@@ -105,6 +105,8 @@ interface AudioRecorderProps {
   showVisualFeedback?: boolean;
   /** Whether to auto-start recording on mount */
   autoStart?: boolean;
+  /** External stop signal - changes to trigger stop */
+  stopSignal?: number;
 }
 
 /**
@@ -143,7 +145,8 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   disabled = false,
   className = '',
   showVisualFeedback = true,
-  autoStart = false
+  autoStart = false,
+  stopSignal = 0
 }) => {
   // Merge user config with defaults
   const audioConfig = { ...DEFAULT_AUDIO_CONFIG, ...config };
@@ -635,6 +638,33 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       startRecording();
     }
   }, [autoStart, recordingState, disabled, startRecording]);
+
+  /**
+   * Listen for external stop signal
+   */
+  useEffect(() => {
+    logger.debug('🔄 AudioRecorder: stopSignal or recordingState changed', {
+      stopSignal,
+      recordingState,
+      instanceId: instanceIdRef.current
+    });
+    
+    // If stopSignal changes and we're recording, stop
+    if (stopSignal > 0 && recordingState === RecordingState.RECORDING) {
+      logger.info('🛑 AudioRecorder: External stop signal received, stopping recording', {
+        instanceId: instanceIdRef.current,
+        stopSignal,
+        recordingState
+      });
+      stopRecording();
+    } else if (stopSignal > 0) {
+      logger.warn('⚠️ AudioRecorder: Stop signal received but not recording', {
+        stopSignal,
+        recordingState,
+        instanceId: instanceIdRef.current
+      });
+    }
+  }, [stopSignal, recordingState, stopRecording]);
 
   /**
    * Cleanup on component unmount
