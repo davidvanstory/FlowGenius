@@ -128,7 +128,7 @@ const Message = ({ message, index, onAction }: MessageProps) => {
         {/* Message Header */}
         <div className="flex items-center gap-2 text-sm">
           <span className="font-medium text-gray-800">
-            {isUser ? 'You' : 'FlowGenius'}
+            {isUser ? 'You' : 'Deep Thinker'}
           </span>
           {formattedTime && (
             <span className="text-gray-600">{formattedTime}</span>
@@ -221,7 +221,7 @@ const TypingIndicator = () => (
     </div>
     <div className="flex-1 min-w-0 space-y-3">
       <div className="flex items-center gap-2 text-sm">
-        <span className="font-medium text-gray-800">FlowGenius</span>
+        <span className="font-medium text-gray-800">Deep Thinker</span>
         <span className="text-gray-600">is typing...</span>
       </div>
       <div className="flex items-center gap-1">
@@ -254,42 +254,11 @@ const DefaultWelcome = ({ currentStage }: { currentStage: WorkflowStage }) => (
       
       <div className="space-y-2">
         <h3 className="text-xl font-semibold text-gray-900">
-          Welcome to FlowGenius
+          Talk to me, what's up?
         </h3>
-        <p className="text-gray-600">
-          Start a conversation to begin developing your ideas through our AI-powered workflow.
-        </p>
       </div>
 
-      <div className="space-y-3">
-        <p className="text-sm font-medium text-gray-700">Current Stage:</p>
-        <div className="flex items-center justify-center gap-2">
-          <div className={`
-            px-3 py-1.5 rounded-full text-sm font-medium border
-            ${currentStage === 'brainstorm' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' : 'bg-gray-100 text-gray-500 border-gray-200'}
-          `}>
-            1. Brainstorm
-          </div>
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          <div className={`
-            px-3 py-1.5 rounded-full text-sm font-medium border
-            ${currentStage === 'summary' ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' : 'bg-gray-100 text-gray-500 border-gray-200'}
-          `}>
-            2. Summary
-          </div>
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          <div className={`
-            px-3 py-1.5 rounded-full text-sm font-medium border
-            ${currentStage === 'prd' ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-gray-100 text-gray-500 border-gray-200'}
-          `}>
-            3. PRD
-          </div>
-        </div>
-      </div>
+
     </div>
   </div>
 );

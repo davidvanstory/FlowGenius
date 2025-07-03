@@ -270,7 +270,7 @@ export const Sidebar = ({
       <div className="flex flex-col p-4 border-b border-gray-700">
         {/* Logo */}
         <div className="flex items-center mb-4">
-          <h1 className="text-xl font-bold text-white">FlowGenius</h1>
+          <h1 className="text-xl font-bold text-white">Deep Thinker</h1>
         </div>
 
         {/* New Session Button */}

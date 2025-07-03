@@ -56,7 +56,7 @@ export const InputBar: React.FC<InputBarProps> = ({
   isProcessing = false,
   isVoiceEnabled = false,
   isUploadEnabled = false,
-  placeholder = "Message FlowGenius...",
+  placeholder = "Message Deep Thinker...",
   maxLength = 4000,
   disabled = false,
 }) => {
@@ -265,7 +265,6 @@ export const InputBar: React.FC<InputBarProps> = ({
             rows={1}
             className="input-textarea"
             aria-label="Message input"
-            aria-describedby="input-help"
           />
         </div>
 
@@ -306,13 +305,7 @@ export const InputBar: React.FC<InputBarProps> = ({
         </button>
       </div>
 
-      {/* Help text */}
-      <div id="input-help" className="input-help">
-        <span className="help-text">
-          Press Enter to send, Shift+Enter for new line
-          {isVoiceEnabled && ', or use the microphone for voice input'}
-        </span>
-      </div>
+
     </div>
   );
 };

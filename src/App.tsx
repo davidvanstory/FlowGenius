@@ -377,7 +377,7 @@ function AppInner() {
           <header className="chat-header">
             <div className="chat-header-content">
               <h1 className="chat-title">
-                {appState.title || 'New Conversation'}
+                {appState.title || 'Deep Thinker'}
               </h1>
               <div className="chat-status">
                 <span className={`status-indicator ${isProcessing ? 'processing' : 'ready'}`}>
@@ -418,7 +418,7 @@ function AppInner() {
               isProcessing={isProcessing}
               isVoiceEnabled={true}
               isUploadEnabled={true} // For future implementation
-              placeholder="Message FlowGenius..."
+              placeholder="Message Deep Thinker..."
               disabled={isProcessing}
             />
             
