@@ -20,6 +20,7 @@ export enum RouteNames {
   PROCESS_VOICE_INPUT = 'processVoiceInput',
   GENERATE_SUMMARY = 'generateSummary',
   EVALUATE_MARKET_LANDSCAPE = 'evaluateMarketLandscape',
+  SEND_MARKET_RESEARCH_EMAIL = 'sendMarketResearchEmail',
   GENERATE_PRD = 'generatePRD',
   END = '__end__'
 }
@@ -88,6 +89,19 @@ export function routeUserAction(state: AppState): string {
       idea_id: state.idea_id
     });
     return RouteNames.EVALUATE_MARKET_LANDSCAPE;
+  }
+
+  // Check for automatic email sending trigger after market research completion
+  if (lastMessage && 
+      lastMessage.role === 'assistant' && 
+      lastMessage.stage_at_creation === 'market_research' &&
+      lastMessage.content.includes('Ireland is great') &&
+      state.current_stage === 'market_research' &&
+      !state.messages.some(msg => msg.content.includes('Market Research Email Sent!'))) {
+    logger.info('Routing to sendMarketResearchEmail after market research completion', {
+      idea_id: state.idea_id
+    });
+    return RouteNames.SEND_MARKET_RESEARCH_EMAIL;
   }
 
   // Check if the last message is from assistant and no new user input
@@ -249,6 +263,8 @@ export function getRoutingDescription(state: AppState): string {
       return 'Generating summary of brainstorming session';
     case RouteNames.EVALUATE_MARKET_LANDSCAPE:
       return 'Evaluating market landscape and competitive analysis';
+    case RouteNames.SEND_MARKET_RESEARCH_EMAIL:
+      return 'Sending market research results via email';
     case RouteNames.GENERATE_PRD:
       return 'Generating Product Requirements Document';
     case RouteNames.END:

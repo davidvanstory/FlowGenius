@@ -32,7 +32,7 @@ function cleanupAllMediaRecorders() {
     activeCount: globalMediaRecorderRegistry.size 
   });
   
-  for (const [id, { mediaRecorder, instanceId }] of globalMediaRecorderRegistry.entries()) {
+  for (const [, { mediaRecorder, instanceId }] of globalMediaRecorderRegistry.entries()) {
     try {
       if (mediaRecorder.state === 'recording' || mediaRecorder.state === 'paused') {
         logger.warn('🛑 Force stopping orphaned MediaRecorder', { instanceId, state: mediaRecorder.state });
@@ -169,6 +169,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const lastChunkLogTimeRef = useRef<number>(0);
   const chunkCountSinceLastLogRef = useRef<number>(0);
   const instanceIdRef = useRef<string>(`recorder_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
+  const recordingStateRef = useRef<RecordingState>(RecordingState.IDLE);
 
   /**
    * Update recording state and notify parent component
@@ -181,6 +182,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       timestamp: new Date()
     });
     
+    recordingStateRef.current = newState;
     setRecordingState(newState);
     onStateChange?.(newState);
   }, [recordingState, onStateChange]);
@@ -283,7 +285,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       
       audioLevelIntervalRef.current = setInterval(() => {
-        if (analyserRef.current && recordingState === RecordingState.RECORDING) {
+        if (analyserRef.current && recordingStateRef.current === RecordingState.RECORDING) {
           analyserRef.current.getByteFrequencyData(dataArray);
           
           // Calculate average audio level (0-100)
@@ -423,19 +425,44 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       recordingStartTimeRef.current = Date.now();
       updateRecordingState(RecordingState.RECORDING);
 
+      // Clear any existing duration interval before creating new one
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+        logger.debug('🕒 AudioRecorder: Cleared existing duration interval before creating new one');
+      }
+
       // Start duration tracking
       durationIntervalRef.current = setInterval(() => {
+        // Check if we're still in recording state to prevent stale intervals
+        if (recordingStateRef.current !== RecordingState.RECORDING) {
+          logger.warn('⚠️ AudioRecorder: Duration interval running in wrong state, clearing', { 
+            currentState: recordingStateRef.current,
+            instanceId: instanceIdRef.current 
+          });
+          if (durationIntervalRef.current) {
+            clearInterval(durationIntervalRef.current);
+            durationIntervalRef.current = null;
+          }
+          return;
+        }
+
         const elapsed = Math.floor((Date.now() - recordingStartTimeRef.current) / 1000);
         setRecordingDuration(elapsed);
 
         // Check max duration
         if (elapsed >= audioConfig.maxDurationSeconds) {
-          logger.warn('⏰ AudioRecorder: Maximum recording duration reached');
+          logger.warn('⏰ AudioRecorder: Maximum recording duration reached', {
+            elapsed,
+            maxDuration: audioConfig.maxDurationSeconds,
+            instanceId: instanceIdRef.current
+          });
           
           // Clear this interval immediately to prevent multiple warnings
           if (durationIntervalRef.current) {
             clearInterval(durationIntervalRef.current);
             durationIntervalRef.current = null;
+            logger.debug('🕒 AudioRecorder: Duration interval cleared after max duration reached');
           }
           
           stopRecording();
@@ -511,15 +538,17 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       instanceId: instanceIdRef.current 
     });
 
-    // Clear intervals
+    // Clear intervals with extra logging
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current);
       durationIntervalRef.current = null;
+      logger.debug('🕒 AudioRecorder: Duration interval cleared in cleanup');
     }
 
     if (audioLevelIntervalRef.current) {
       clearInterval(audioLevelIntervalRef.current);
       audioLevelIntervalRef.current = null;
+      logger.debug('📊 AudioRecorder: Audio level interval cleared in cleanup');
     }
 
     // Clean up MediaRecorder and clear event handlers to prevent memory leaks
@@ -617,6 +646,9 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       disabled 
     });
     
+    // Initialize ref with current state
+    recordingStateRef.current = recordingState;
+    
     // Clean up any orphaned MediaRecorder instances from previous component unmounts
     if (globalMediaRecorderRegistry.size > 0) {
       logger.warn('⚠️ Found orphaned MediaRecorder instances, cleaning up', { 
@@ -626,6 +658,13 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       cleanupAllMediaRecorders();
     }
   }, []); // Only run on mount
+
+  /**
+   * Keep ref synced with state
+   */
+  useEffect(() => {
+    recordingStateRef.current = recordingState;
+  }, [recordingState]);
 
   /**
    * Auto-start recording if requested

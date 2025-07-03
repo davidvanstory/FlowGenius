@@ -530,10 +530,10 @@ export class TavilyService {
       }
     }
 
-    // Sort by relevance score and limit to top competitors
+    // Sort by relevance score and limit to top 3 competitors
     return competitors
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
-      .slice(0, 5);
+      .slice(0, 3);
   }
 
   /**

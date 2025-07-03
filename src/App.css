@@ -552,6 +552,7 @@
 /* Enhanced Loading States */
 .summary-generation-indicator {
   animation: pulse 2s infinite;
+  transition: all 0.3s ease-in-out;
 }
 
 @keyframes pulse {
@@ -567,15 +568,51 @@
   animation: bounce 1.5s infinite;
 }
 
+/* Market Research Phase Styles */
+.market-research-indicator {
+  animation: pulse 2s infinite;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Enhanced bounce animation for different phases */
 @keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
+  0%, 100% {
     transform: translateY(0);
   }
-  40% {
-    transform: translateY(-10px);
+  50% {
+    transform: translateY(-4px);
   }
-  60% {
-    transform: translateY(-5px);
+}
+
+/* Phase transition animation */
+.phase-transition {
+  animation: fadeInSlide 0.5s ease-in-out;
+}
+
+@keyframes fadeInSlide {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Enhanced loading dot animation for research phase */
+.research-dots {
+  animation: researchPulse 1.8s infinite;
+}
+
+@keyframes researchPulse {
+  0%, 100% {
+    opacity: 0.4;
+    background-color: #9333ea;
+  }
+  50% {
+    opacity: 1;
+    background-color: #7c3aed;
   }
 }
 

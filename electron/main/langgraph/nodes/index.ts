@@ -15,6 +15,7 @@ export { processUserTurn } from './processUserTurn';
 export { processVoiceInput } from './processVoiceInput';
 export { generateSummary } from './generateSummary';
 export { evaluateMarketLandscape } from './evaluateMarketLandscape';
+export { sendMarketResearchEmail } from './sendMarketResearchEmail';
 
 // Export wrapped versions with error handling
 import { processUserTurn as processUserTurnBase } from './processUserTurn';
@@ -86,6 +87,7 @@ export type LangGraphNodeName =
   | 'processVoiceInput' 
   | 'generateSummary'
   | 'evaluateMarketLandscape'
+  | 'sendMarketResearchEmail'
   | 'generatePRD';
 
 /**

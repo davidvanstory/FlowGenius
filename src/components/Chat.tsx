@@ -5,7 +5,7 @@
  * Handles message rendering, typing indicators, and proper accessibility features.
  */
 
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import { ChatMessage, WorkflowStage } from '../types/AppState';
 import { logger } from '../utils/logger';
 
@@ -217,17 +217,39 @@ const TypingIndicator = ({ currentStage, isGeneratingSummary }: {
   currentStage: WorkflowStage; 
   isGeneratingSummary?: boolean; 
 }) => {
+  const [summaryPhase, setSummaryPhase] = useState<'analyzing' | 'researching'>('analyzing');
+
+  /**
+   * Auto-advance summary phase to show market research after a delay
+   */
+  useEffect(() => {
+    if (isGeneratingSummary) {
+      // Start with analyzing phase
+      setSummaryPhase('analyzing');
+      
+      // After 3 seconds, switch to researching phase
+      const timer = setTimeout(() => {
+        setSummaryPhase('researching');
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isGeneratingSummary]);
+
   /**
    * Get appropriate loading message based on context
    */
   const loadingMessage = useMemo(() => {
     logger.debug('🔄 TypingIndicator: Determining loading message', { 
       currentStage, 
-      isGeneratingSummary 
+      isGeneratingSummary,
+      summaryPhase
     });
 
     if (isGeneratingSummary) {
-      return 'analyzing conversation and generating summary...';
+      return summaryPhase === 'analyzing' 
+        ? 'analyzing conversation and generating summary...'
+        : 'researching market landscape and competitors...';
     }
 
     switch (currentStage) {
@@ -240,14 +262,14 @@ const TypingIndicator = ({ currentStage, isGeneratingSummary }: {
       default:
         return 'processing your request...';
     }
-  }, [currentStage, isGeneratingSummary]);
+  }, [currentStage, isGeneratingSummary, summaryPhase]);
 
   /**
    * Get appropriate loading icon based on context
    */
   const loadingIcon = useMemo(() => {
     if (isGeneratingSummary) {
-      return '📄'; // Document icon for summary generation
+      return summaryPhase === 'analyzing' ? '📄' : '🔍'; // Document for summary, magnifying glass for research
     }
 
     switch (currentStage) {
@@ -260,7 +282,17 @@ const TypingIndicator = ({ currentStage, isGeneratingSummary }: {
       default:
         return '🤖'; // Robot for generic processing
     }
-  }, [currentStage, isGeneratingSummary]);
+  }, [currentStage, isGeneratingSummary, summaryPhase]);
+
+  /**
+   * Get phase-specific badge text
+   */
+  const badgeText = useMemo(() => {
+    if (isGeneratingSummary) {
+      return summaryPhase === 'analyzing' ? 'Generating Summary' : 'Researching Market';
+    }
+    return null;
+  }, [isGeneratingSummary, summaryPhase]);
 
   return (
     <div className="flex gap-4 px-4 py-6 bg-gray-50">
@@ -273,9 +305,13 @@ const TypingIndicator = ({ currentStage, isGeneratingSummary }: {
         <div className="flex items-center gap-2 text-sm">
           <span className="font-medium text-gray-800">Deep Thinker</span>
           <span className="text-gray-600">{loadingMessage}</span>
-          {isGeneratingSummary && (
-            <span className="text-blue-600 text-xs font-medium px-2 py-1 bg-blue-50 rounded-full border border-blue-200 summary-generation-indicator">
-              Generating Summary
+          {badgeText && (
+            <span className={`text-xs font-medium px-2 py-1 rounded-full border summary-generation-indicator ${
+              summaryPhase === 'analyzing' 
+                ? 'text-blue-600 bg-blue-50 border-blue-200' 
+                : 'text-purple-600 bg-purple-50 border-purple-200'
+            }`}>
+              {badgeText}
             </span>
           )}
         </div>
@@ -297,7 +333,10 @@ const TypingIndicator = ({ currentStage, isGeneratingSummary }: {
           </span>
           {isGeneratingSummary && (
             <span className="text-xs text-gray-500 ml-2">
-              This may take a few moments...
+              {summaryPhase === 'analyzing' 
+                ? 'Analyzing your conversation...' 
+                : 'Finding similar solutions...'
+              }
             </span>
           )}
         </div>

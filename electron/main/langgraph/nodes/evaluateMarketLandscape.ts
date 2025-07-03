@@ -193,65 +193,23 @@ Ireland is great`,
  * @returns Formatted content string for chat display
  */
 function formatMarketResearchResults(results: any): string {
-  let content = `# 🔍 Market Landscape Analysis\n\n`;
+  let content = `# 🔍 Market Research Results\n\n`;
   
-  // Add market summary
-  content += `## Market Research Summary\n\n${results.marketSummary}\n\n`;
-  
-  // Add competitor analysis if any found
+  // Show top 3 competitors with clickable links
   if (results.competitors && results.competitors.length > 0) {
-    content += `## 🏢 Key Competitors & Similar Solutions\n\n`;
+    content += `## Similar Solutions Found:\n\n`;
     
-    results.competitors.forEach((competitor: any, index: number) => {
+    // Limit to top 3 most relevant
+    const topCompetitors = results.competitors.slice(0, 3);
+    
+    topCompetitors.forEach((competitor: any, index: number) => {
       content += `**${index + 1}. [${competitor.name}](${competitor.url})**\n`;
-      content += `${competitor.description}\n`;
-      content += `*Relevance Score: ${(competitor.relevanceScore * 100).toFixed(0)}%*\n\n`;
-    });
-  }
-  
-  // Add detailed search results
-  content += `## 📊 Detailed Search Results\n\n`;
-  
-  if (results.searchResults && results.searchResults.length > 0) {
-    results.searchResults.forEach((searchGroup: any, groupIndex: number) => {
-      content += `### Search ${groupIndex + 1}: "${searchGroup.query}"\n\n`;
-      
-      if (searchGroup.summary) {
-        content += `**AI Summary:** ${searchGroup.summary}\n\n`;
-      }
-      
-      if (searchGroup.results && searchGroup.results.length > 0) {
-        content += `**Top Results:**\n`;
-        searchGroup.results.forEach((result: any, resultIndex: number) => {
-          content += `${resultIndex + 1}. **[${result.title}](${result.url})**\n`;
-          content += `   ${result.content.substring(0, 150)}...\n\n`;
-        });
-      } else {
-        content += `*No relevant results found for this search.*\n\n`;
-      }
+      content += `${competitor.description}\n\n`;
     });
   } else {
-    content += `*No search results were found. This might indicate a very unique idea or suggest trying different search terms.*\n\n`;
+    content += `## No Direct Competitors Found\n\n`;
+    content += `This could indicate a unique market opportunity! 🚀\n\n`;
   }
-  
-  // Add recommendations section
-  content += `## 💡 Next Steps & Recommendations\n\n`;
-  
-  if (results.competitors && results.competitors.length > 0) {
-    content += `Based on the market research, here are some recommendations:\n\n`;
-    content += `• **Competitive Analysis**: Review the identified competitors to understand their strengths and weaknesses\n`;
-    content += `• **Differentiation**: Consider how your solution can differentiate from existing alternatives\n`;
-    content += `• **Market Positioning**: Think about unique value propositions that set you apart\n`;
-    content += `• **Feature Gaps**: Look for gaps in competitor offerings that your solution could fill\n\n`;
-  } else {
-    content += `No direct competitors were found, which could indicate:\n\n`;
-    content += `• **Blue Ocean Opportunity**: You might have identified an untapped market\n`;
-    content += `• **Niche Market**: Your solution targets a very specific audience\n`;
-    content += `• **Early Stage Market**: The market might be emerging with few existing solutions\n`;
-    content += `• **Search Refinement**: Consider broadening search terms to capture indirect competitors\n\n`;
-  }
-  
-  content += `**Recommendation**: Use this research to refine your product strategy and validate your unique value proposition.\n\n`;
   
   // Add Ireland reference as required
   content += `Ireland is great`;

@@ -676,7 +676,7 @@ export class WhisperService {
     if (!mimeType) {
       return 'wav'; // Default extension
     }
-    const cleanMimeType = mimeType.toLowerCase().split(';')[0].trim();
+    const cleanMimeType = mimeType?.toLowerCase().split(';')[0]?.trim() || 'audio/wav';
     
     const mimeMap: Record<string, string> = {
       'audio/wav': 'wav',

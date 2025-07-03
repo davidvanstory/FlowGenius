@@ -19,6 +19,7 @@ import { processUserTurn } from './nodes/processUserTurn';
 import { processVoiceInput } from './nodes/processVoiceInput';
 import { generateSummary } from './nodes/generateSummary';
 import { evaluateMarketLandscape } from './nodes/evaluateMarketLandscape';
+import { sendMarketResearchEmail } from './nodes/sendMarketResearchEmail';
 import { routeUserAction, RouteNames } from './router';
 import { AppState } from '../../../src/types/AppState';
 import { logger } from '../../../src/utils/logger';
@@ -42,6 +43,7 @@ export function createFlowGeniusWorkflow() {
     .addNode(RouteNames.PROCESS_VOICE_INPUT, processVoiceInput)
     .addNode(RouteNames.GENERATE_SUMMARY, generateSummary)
     .addNode(RouteNames.EVALUATE_MARKET_LANDSCAPE, evaluateMarketLandscape)
+    .addNode(RouteNames.SEND_MARKET_RESEARCH_EMAIL, sendMarketResearchEmail)
     
     // Set up entry point routing
     .addEdge(START, RouteNames.PROCESS_USER_TURN)
@@ -55,6 +57,7 @@ export function createFlowGeniusWorkflow() {
         [RouteNames.PROCESS_VOICE_INPUT]: RouteNames.PROCESS_VOICE_INPUT,
         [RouteNames.GENERATE_SUMMARY]: RouteNames.GENERATE_SUMMARY,
         [RouteNames.EVALUATE_MARKET_LANDSCAPE]: RouteNames.EVALUATE_MARKET_LANDSCAPE,
+        [RouteNames.SEND_MARKET_RESEARCH_EMAIL]: RouteNames.SEND_MARKET_RESEARCH_EMAIL,
         [RouteNames.END]: END
       }
     )
@@ -68,6 +71,7 @@ export function createFlowGeniusWorkflow() {
         [RouteNames.PROCESS_VOICE_INPUT]: RouteNames.PROCESS_VOICE_INPUT,
         [RouteNames.GENERATE_SUMMARY]: RouteNames.GENERATE_SUMMARY,
         [RouteNames.EVALUATE_MARKET_LANDSCAPE]: RouteNames.EVALUATE_MARKET_LANDSCAPE,
+        [RouteNames.SEND_MARKET_RESEARCH_EMAIL]: RouteNames.SEND_MARKET_RESEARCH_EMAIL,
         [RouteNames.END]: END
       }
     )
@@ -79,6 +83,7 @@ export function createFlowGeniusWorkflow() {
       {
         [RouteNames.PROCESS_USER_TURN]: RouteNames.PROCESS_USER_TURN,
         [RouteNames.EVALUATE_MARKET_LANDSCAPE]: RouteNames.EVALUATE_MARKET_LANDSCAPE,
+        [RouteNames.SEND_MARKET_RESEARCH_EMAIL]: RouteNames.SEND_MARKET_RESEARCH_EMAIL,
         [RouteNames.END]: END
       }
     )
@@ -86,6 +91,17 @@ export function createFlowGeniusWorkflow() {
     // Add conditional routing from evaluateMarketLandscape
     .addConditionalEdges(
       RouteNames.EVALUATE_MARKET_LANDSCAPE,
+      routeUserAction,
+      {
+        [RouteNames.PROCESS_USER_TURN]: RouteNames.PROCESS_USER_TURN,
+        [RouteNames.SEND_MARKET_RESEARCH_EMAIL]: RouteNames.SEND_MARKET_RESEARCH_EMAIL,
+        [RouteNames.END]: END
+      }
+    )
+    
+    // Add conditional routing from sendMarketResearchEmail
+    .addConditionalEdges(
+      RouteNames.SEND_MARKET_RESEARCH_EMAIL,
       routeUserAction,
       {
         [RouteNames.PROCESS_USER_TURN]: RouteNames.PROCESS_USER_TURN,
@@ -98,7 +114,7 @@ export function createFlowGeniusWorkflow() {
   
   console.log('✅ FlowGenius LangGraph workflow created successfully');
   logger.info('LangGraph workflow compiled', {
-    nodeCount: 4,
+    nodeCount: 5,
     hasConditionalRouting: true,
     entryPoint: RouteNames.PROCESS_USER_TURN
   });
