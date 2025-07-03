@@ -204,6 +204,19 @@
   max-height: 10rem;
 }
 
+/* Override for chat input textarea */
+.input-bar .input-textarea {
+  background-color: #ffffff !important;
+  color: #374151 !important;
+  border: none !important;
+  padding: 0 !important;
+  font-size: 0.75rem !important;
+  line-height: 1.4 !important;
+  min-height: 20px !important;
+  max-height: 60px !important;
+  resize: none !important;
+}
+
 /* Input Group - Label + Input + Helper text */
 .input-group {
   display: flex;

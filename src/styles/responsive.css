@@ -124,21 +124,26 @@
   /* Input Bar Adjustments */
   .chat-input-area {
     padding: var(--spacing-3) var(--spacing-4);
+    background-color: #ffffff;
+    border-top: 1px solid #e5e7eb;
   }
   
   .input-bar {
-    padding: var(--spacing-2) var(--spacing-3);
+    padding: calc(var(--spacing-2) * 0.75) var(--spacing-3);
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
   }
   
   .input-textarea {
-    font-size: var(--font-size-sm);
-    padding: var(--spacing-2) var(--spacing-3);
+    font-size: calc(var(--font-size-sm) * 0.85);
+    padding: calc(var(--spacing-2) * 0.75) var(--spacing-3);
+    color: #374151;
   }
   
   .input-action-button {
-    width: 2rem;
-    height: 2rem;
-    padding: var(--spacing-1);
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: calc(var(--spacing-1) * 0.75);
   }
   
   /* Welcome Message Adjustments */
@@ -199,6 +204,8 @@
   
   .chat-input-area {
     padding: var(--spacing-4) var(--spacing-6);
+    background-color: #ffffff;
+    border-top: 1px solid #e5e7eb;
   }
 }
 
@@ -286,22 +293,27 @@
   /* Input Bar Enhancements */
   .chat-input-area {
     padding: var(--spacing-6) var(--spacing-8);
+    background-color: #ffffff;
+    border-top: 1px solid #e5e7eb;
   }
   
   .input-bar {
-    padding: var(--spacing-4) var(--spacing-5);
+    padding: calc(var(--spacing-4) * 0.75) var(--spacing-5);
     border-radius: var(--radius-xl);
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
   }
   
   .input-textarea {
-    font-size: var(--font-size-base);
-    padding: var(--spacing-3) var(--spacing-4);
+    font-size: calc(var(--font-size-base) * 0.9);
+    padding: calc(var(--spacing-3) * 0.75) var(--spacing-4);
+    color: #374151;
   }
   
   .input-action-button {
-    width: 3rem;
-    height: 3rem;
-    padding: var(--spacing-3);
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: calc(var(--spacing-3) * 0.75);
   }
   
   /* Welcome Message Enhancements */
@@ -344,8 +356,9 @@
   }
   
   .input-textarea {
-    font-size: var(--font-size-lg);
-    padding: var(--spacing-4) var(--spacing-6);
+    font-size: var(--font-size-base);
+    padding: calc(var(--spacing-4) * 0.75) var(--spacing-6);
+    color: #374151;
   }
   
   /* Enhanced welcome message for ultra-wide */

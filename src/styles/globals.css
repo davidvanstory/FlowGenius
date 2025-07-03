@@ -300,6 +300,12 @@ select {
   transition: border-color var(--transition-fast);
 }
 
+/* Override for chat input textarea */
+.input-bar textarea {
+  background-color: #ffffff !important;
+  color: #374151 !important;
+}
+
 input:focus,
 textarea:focus,
 select:focus {

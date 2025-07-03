@@ -40,6 +40,7 @@
   - [x] 3.1 Update message text colors in Chat.tsx for better contrast
   - [x] 3.2 Improve chat background colors in components.css
   - [x] 3.3 Update gray text colors to meet accessibility standards
+  - [x] 3.4 Reduce the size of the text input field to be half the size and make the text input section white for consistency with the rest of the "new Conversation" panel 
 - [ ] 4.0 Streamline Audio Recording to Single Click
   - [ ] 4.1 Modify useAudioRecording hook to skip permission dialog when permission already granted
   - [ ] 4.2 Update InputBar microphone button to start recording immediately
