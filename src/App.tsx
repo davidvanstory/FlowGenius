@@ -11,7 +11,7 @@ import { IdeaEntity } from './types/AppState';
 import { logger } from './utils/logger';
 import { LangGraphProvider, useLangGraph, useSendMessage, useSessionManagement } from './hooks/useLangGraph';
 import { useAudioRecording } from './hooks/useAudioRecording';
-import { createWhisperService, WhisperService } from './services/whisperService';
+// WhisperService now handled by LangGraph processVoiceInput node
 import Sidebar from './components/Sidebar';
 import Chat from './components/Chat';
 import InputBar from './components/InputBar';
@@ -60,7 +60,7 @@ const createMockSessions = (currentSessionId: string): IdeaEntity[] => [
  */
 function AppInner() {
   // LangGraph hooks for state and actions
-  const { state: langGraphState, clearError } = useLangGraph();
+  const { state: langGraphState, clearError, sendVoiceInput } = useLangGraph();
   const { sendMessage, isLoading: isSendingMessage, error: sendMessageError } = useSendMessage();
   const { createNewSession, currentSession, isLoading: isSessionLoading } = useSessionManagement();
 
@@ -70,8 +70,7 @@ function AppInner() {
   // Input state for the message input bar
   const [inputValue, setInputValue] = useState('');
 
-  // WhisperService instance for audio transcription
-  const [whisperService, setWhisperService] = useState<WhisperService | null>(null);
+  // Processing state for voice transcription
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   // Mock sessions data - will be replaced with real database data
@@ -84,122 +83,71 @@ function AppInner() {
   const isProcessing = langGraphState.isExecuting || isSendingMessage || isTranscribing;
   const currentError = langGraphState.error || sendMessageError;
 
-  // Initialize WhisperService on component mount
-  useEffect(() => {
-    async function initializeWhisperService() {
-      logger.info('🎤 Initializing WhisperService for voice transcription');
-      
-      try {
-        const service = await createWhisperService();
-        setWhisperService(service);
-        
-        logger.info('✅ WhisperService initialized successfully');
-        
-        // Test connection to verify API key
-        try {
-          const result = await service.testConnection();
-          if (result.success) {
-            logger.info('🔗 OpenAI API connection verified');
-          } else {
-            logger.warn('⚠️ OpenAI API connection test failed', { error: result.error });
-          }
-        } catch (error) {
-          logger.warn('⚠️ OpenAI API connection test error', { 
-            error: error instanceof Error ? error.message : String(error) 
-          });
-        }
-        
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        logger.error('❌ Failed to initialize WhisperService', { error: errorMsg });
-        
-        // Don't block the app, just disable voice features
-        if (errorMsg.includes('OPENAI_API_KEY')) {
-          logger.warn('🔑 Voice transcription disabled - OpenAI API key not configured');
-          logger.info('💡 To enable voice features: Set your OpenAI API key in the .env file');
-        }
-      }
-    }
-
-    initializeWhisperService();
-  }, []);
-
-  // Audio recording hook with WhisperService integration
+  // Audio recording hook with LangGraph voice integration
   const audioRecording = useAudioRecording(async (audioBlob, duration) => {
-    logger.info('🎤 Audio recording completed, starting transcription', { 
+    logger.info('🎤 Audio recording completed, saving to temporary file for LangGraph processing', { 
       blobSize: audioBlob.size, 
       duration,
       mimeType: audioBlob.type 
     });
     
-    // Check if WhisperService is available
-    if (!whisperService) {
-      logger.warn('⚠️ WhisperService not available, using placeholder message');
-      const placeholderMessage = `[Voice recording: ${duration}s - WhisperService not initialized]`;
-      await handleSendMessage(placeholderMessage);
-      return;
-    }
-
     setIsTranscribing(true);
     
     try {
-      logger.info('🔄 Starting audio transcription with Whisper API', {
+      // Convert Blob to ArrayBuffer for IPC transfer
+      logger.info('🔄 Converting audio blob to buffer for file save', {
         blobSize: audioBlob.size,
+        mimeType: audioBlob.type
+      });
+
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioBuffer = new Uint8Array(arrayBuffer);
+
+      // Save audio to temporary file using IPC
+      logger.info('💾 Saving audio to temporary file via IPC', {
+        bufferSize: audioBuffer.length,
+        originalName: `voice_recording_${Date.now()}`,
+        mimeType: audioBlob.type
+      });
+
+      const saveResult = await window.electron.audio.saveAudioFile(
+        audioBuffer,
+        `voice_recording_${Date.now()}`,
+        audioBlob.type
+      );
+
+      if (!saveResult.success || !saveResult.filePath) {
+        throw new Error(`Failed to save audio file: ${saveResult.error || 'No file path returned'}`);
+      }
+
+      logger.info('✅ Audio file saved successfully', {
+        filePath: saveResult.filePath,
+        fileSize: saveResult.metadata?.size
+      });
+
+      // Send the file path to LangGraph for processing
+      logger.info('🔄 Sending voice file path to LangGraph workflow', {
+        filePath: saveResult.filePath,
         duration,
         mimeType: audioBlob.type
       });
 
-      // Transcribe the audio using WhisperService
-      const transcriptionResult = await whisperService.transcribeBlob(audioBlob, {
-        responseFormat: 'text',
-        language: 'en', // Auto-detect if not specified
-        temperature: 0.2, // Lower temperature for more consistent transcription
-        prompt: 'This is a voice message for an AI assistant conversation.'
+      await sendVoiceInput(saveResult.filePath, duration, audioBlob.type, audioBlob.size);
+
+      logger.info('✅ Voice input sent to LangGraph successfully', {
+        filePath: saveResult.filePath,
+        duration
       });
-
-      if (transcriptionResult.success && transcriptionResult.data?.text) {
-        const transcribedText = transcriptionResult.data.text.trim();
-        
-        logger.info('✅ Audio transcription completed successfully', {
-          transcriptionLength: transcribedText.length,
-          duration: transcriptionResult.duration,
-          retryCount: transcriptionResult.retryCount
-        });
-
-        // Log the transcription for debugging
-        logger.debug('📝 Transcribed text', { text: transcribedText });
-
-        // Send the transcribed text as a message
-        if (transcribedText) {
-          await handleSendMessage(transcribedText);
-        } else {
-          logger.warn('⚠️ Transcription was empty, sending placeholder');
-          await handleSendMessage(`[Voice recording: ${duration}s - No speech detected]`);
-        }
-
-      } else {
-        // Handle transcription failure
-        const errorMsg = transcriptionResult.error || 'Unknown transcription error';
-        logger.error('❌ Audio transcription failed', { 
-          error: errorMsg,
-          duration: transcriptionResult.duration,
-          retryCount: transcriptionResult.retryCount
-        });
-
-        // Send error message to chat
-        const errorMessage = `[Voice recording: ${duration}s - Transcription failed: ${errorMsg}]`;
-        await handleSendMessage(errorMessage);
-      }
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.error('❌ Unexpected error during audio transcription', { 
+      logger.error('❌ Failed to process voice input', { 
         error: errorMsg,
         duration 
       });
 
-      // Send error message to chat
-      const errorMessage = `[Voice recording: ${duration}s - Transcription error: ${errorMsg}]`;
+      // Fallback: send error message to chat
+      const errorMessage = `[Voice recording: ${duration}s - Processing failed: ${errorMsg}]`;
       await handleSendMessage(errorMessage);
 
     } finally {

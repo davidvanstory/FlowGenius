@@ -27,27 +27,42 @@ export function initializeAudioHandlers(): void {
   /**
    * Save audio blob data to filesystem
    */
-  ipcMain.handle('audio:save-file', async (event, audioData: Buffer, originalName?: string, mimeType?: string) => {
+  ipcMain.handle('audio:save-file', async (event, audioData: any, originalName?: string, mimeType?: string) => {
     const startTime = Date.now();
     
-    try {
+        try {
+      // Validate and convert input data to Buffer
+      if (!audioData) {
+        throw new Error('Audio data is missing');
+      }
+
+      // Convert various data types to Buffer (IPC serialization can change types)
+      let audioBuffer: Buffer;
+      if (Buffer.isBuffer(audioData)) {
+        audioBuffer = audioData;
+      } else if (audioData instanceof Uint8Array) {
+        audioBuffer = Buffer.from(audioData);
+      } else if (Array.isArray(audioData)) {
+        audioBuffer = Buffer.from(audioData);
+      } else if (typeof audioData === 'object' && audioData.type === 'Buffer' && Array.isArray(audioData.data)) {
+        // Handle serialized Buffer objects from IPC
+        audioBuffer = Buffer.from(audioData.data);
+      } else {
+        throw new Error('Invalid audio data: must be Buffer, Uint8Array, or array');
+      }
+
+      if (audioBuffer.length === 0) {
+        throw new Error('Audio data is empty');
+      }
+
       console.log('📨 IPC: Saving audio file', {
-        dataSize: audioData?.length || 0,
+        dataSize: audioBuffer.length,
         originalName,
         mimeType
       });
 
-      // Validate input
-      if (!audioData || !Buffer.isBuffer(audioData)) {
-        throw new Error('Invalid audio data: must be a Buffer');
-      }
-
-      if (audioData.length === 0) {
-        throw new Error('Audio data is empty');
-      }
-
       const audioManager = getAudioFileManager();
-      const result = await audioManager.saveAudioFile(audioData, originalName, mimeType);
+      const result = await audioManager.saveAudioFile(audioBuffer, originalName, mimeType);
       
       const duration = Date.now() - startTime;
       console.log('✅ IPC: Audio file saved', {

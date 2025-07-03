@@ -37,8 +37,8 @@ contextBridge.exposeInMainWorld('langgraph', {
 contextBridge.exposeInMainWorld('electron', {
   // Audio API
   audio: {
-    saveAudioFile: (audioData: Buffer, originalName?: string, mimeType?: string) => 
-      ipcRenderer.invoke('audio:save-file', audioData, originalName, mimeType),
+    saveAudioFile: (audioData: Uint8Array | Buffer, originalName?: string, mimeType?: string) => 
+      ipcRenderer.invoke('audio:save-file', Buffer.from(audioData), originalName, mimeType),
     
     convertAudioFile: (inputPath: string, options?: any) => 
       ipcRenderer.invoke('audio:convert-file', inputPath, options),

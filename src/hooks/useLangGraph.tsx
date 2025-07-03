@@ -14,7 +14,7 @@
  */
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
-import { AppState, ChatMessage, WorkflowStage, UserAction } from '../types/AppState';
+import { AppState, ChatMessage, WorkflowStage, UserAction, VoiceAudioData } from '../types/AppState';
 import { langgraphService, WorkflowMetrics } from '../services/langgraphService';
 import { logger } from '../utils/logger';
 
@@ -66,7 +66,7 @@ interface LangGraphContextValue {
   sendMessage: (content: string, imageUrl?: string) => Promise<void>;
   
   /** Send voice input through the workflow */
-  sendVoiceInput: (audioBlob: Blob) => Promise<void>;
+  sendVoiceInput: (filePath: string, duration: number, mimeType: string, size: number) => Promise<void>;
   
   /** Trigger stage completion (e.g., "Brainstorm Done") */
   completeStage: (stage: WorkflowStage) => Promise<void>;
@@ -357,26 +357,38 @@ export function LangGraphProvider({ children }: { children: React.ReactNode }) {
   /**
    * Send voice input through the workflow
    */
-  const sendVoiceInput = useCallback(async (audioBlob: Blob): Promise<void> => {
+  const sendVoiceInput = useCallback(async (
+    filePath: string, 
+    duration: number, 
+    mimeType: string,
+    size: number
+  ): Promise<void> => {
     console.log('🎤 LangGraph Provider: Sending voice input', {
-      audioSize: audioBlob.size,
-      audioType: audioBlob.type,
+      filePath,
+      size,
+      mimeType,
+      duration,
       currentStage: state.appState.current_stage
     });
 
-    // For now, we'll create a placeholder message indicating voice input
-    // TODO: Integrate with actual voice processing in task 5.0
-    const voiceMessage: ChatMessage = {
-      role: 'user',
-      content: '[Voice input received - processing...]',
-      created_at: new Date(),
-      stage_at_creation: state.appState.current_stage
+    // Create voice audio data object
+    const voiceAudioData: VoiceAudioData = {
+      filePath,
+      duration,
+      mimeType,
+      size,
+      recorded_at: new Date()
     };
 
+    // Update state with voice audio data for processing
     const updatedState: AppState = {
       ...state.appState,
-      messages: [...state.appState.messages, voiceMessage],
+      voice_audio_data: voiceAudioData,
+      // Clear any previous transcription data
+      voice_transcription: undefined,
       last_user_action: 'chat',
+      // Clear any previous errors
+      error: undefined,
       updated_at: new Date()
     };
 
@@ -595,6 +607,6 @@ export function useWorkflowMetrics() {
     metrics: getMetrics(),
     executionHistory: state.executionHistory,
     currentState: state.appState,
-    isExecuting: state.isExecuting
-  };
+      isExecuting: state.isExecuting
+};
 } 

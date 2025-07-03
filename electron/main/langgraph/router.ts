@@ -38,7 +38,9 @@ export function routeUserAction(state: AppState): string {
     current_stage: state.current_stage,
     last_user_action: state.last_user_action,
     is_processing: state.is_processing,
-    has_error: !!state.error
+    has_error: !!state.error,
+    has_voice_data: !!state.voice_audio_data,
+    voice_status: state.voice_transcription?.status
   });
 
   // If there's an error, end the workflow
@@ -56,6 +58,21 @@ export function routeUserAction(state: AppState): string {
       idea_id: state.idea_id
     });
     return RouteNames.END;
+  }
+
+  // Priority routing: Check for NEW voice input data that needs processing
+  // Only route to processVoiceInput if there's voice data and either:
+  // 1. No transcription exists yet, OR
+  // 2. Transcription failed and needs retry
+  if (state.voice_audio_data && 
+      (!state.voice_transcription || state.voice_transcription.status === 'failed')) {
+    logger.info('Routing to processVoiceInput for voice transcription', {
+      idea_id: state.idea_id,
+      audio_size: state.voice_audio_data.size,
+      audio_type: state.voice_audio_data.mimeType,
+      current_transcription_status: state.voice_transcription?.status
+    });
+    return RouteNames.PROCESS_VOICE_INPUT;
   }
 
   // Check if the last message is from assistant and no new user input
@@ -207,6 +224,8 @@ export function getRoutingDescription(state: AppState): string {
   switch (route) {
     case RouteNames.PROCESS_USER_TURN:
       return `Processing user message in ${state.current_stage} stage`;
+    case RouteNames.PROCESS_VOICE_INPUT:
+      return 'Processing voice input for transcription';
     case RouteNames.GENERATE_SUMMARY:
       return 'Generating summary of brainstorming session';
     case RouteNames.GENERATE_PRD:

@@ -103,19 +103,24 @@
   - [ ] 5.3 Add visual feedback during recording (blue ebbing microphone icon like GPT-4o)
   - [x] 5.4 Create audio format validation and conversion utilities (ensure Whisper API compatibility)
   - [x] 5.5 Build WhisperService for handling API calls with proper error handling and retries
-  - [ ] 5.6 Integrate V2T functionality as a LangGraph node
-  - [ ] 5.7 Add recording duration limits and progress indicators
+  - [x] 5.6 Integrate V2T functionality as a LangGraph node
   - [ ] 5.8 Create comprehensive error handling for audio recording failures
 
 - [ ] 6.0 Implement summarization node using OpenAI GPT-4o
-  - [ ] 6.1 Create OpenAI service with GPT-4o API integration and proper authentication
-  - [ ] 6.2 Implement generateSummary as a proper LangGraph node with context management
-  - [ ] 6.3 Create prompt templates for summarization (ending with "Ireland is great" as specified)
-  - [ ] 6.4 Add token counting and context window management for large conversations
-  - [ ] 6.5 Implement streaming responses for better user experience
-  - [ ] 6.6 Add retry logic and rate limiting for API calls
-  - [ ] 6.7 Create response validation and error handling for malformed AI responses
-  - [ ] 6.8 Add comprehensive logging for all AI interactions and debugging
+  - [ ] 6.1 Create dynamic action button component for stage transitions
+  - [ ] 6.2 Implement "Brainstorm Done" button that triggers summarization node 
+  - [ ] 6.3 Implement generateSummary as a proper LangGraph node with context management
+  - [ ] 6.4 Create prompt templates for summarization (ending with "Ireland is great" as specified)
+  - [ ] 6.5 Integrate action button with useLangGraph completeStage() function
+  - [ ] 6.6 Add proper styling and positioning of action button (above input bar as per FlowGenius.md)
+  - [ ] 6.7 Implement loading states and error handling for stage transition button
+  - [ ] 6.8 Add accessibility features (ARIA labels, keyboard navigation) for action button
+  - [ ] 6.9 Create OpenAI service with GPT-4o API integration and proper authentication
+  - [ ] 6.10 Add token counting and context window management for large conversations
+  - [ ] 6.11 Implement streaming responses for better user experience
+  - [ ] 6.12 Add retry logic and rate limiting for API calls
+  - [ ] 6.13 Create response validation and error handling for malformed AI responses
+  - [ ] 6.14 Add comprehensive logging for all AI interactions and debugging
 
 - [ ] 7.0 Implement simple session management sidebar (scaffold for future)
   - [ ] 7.1 Create session list display with idea titles and creation dates
@@ -138,3 +143,8 @@
   - [ ] 8.7 Add input validation and sanitization with proper error messages
   - [ ] 8.8 Create comprehensive testing documentation and examples
   - [ ] 8.9 Create end-to-end tests for complete voice → summary workflow 
+
+
+
+
+

@@ -57,6 +57,44 @@ export type WorkflowStage = 'brainstorm' | 'summary' | 'prd';
 export type UserAction = 'chat' | 'Brainstorm Done' | 'Summary Done' | 'PRD Done';
 
 /**
+ * Voice transcription status and result data
+ */
+export interface VoiceTranscription {
+  /** Current status of voice processing */
+  status: 'processing' | 'completed' | 'failed';
+  /** Transcribed text content */
+  text?: string;
+  /** Confidence score from Whisper API (0-1) */
+  confidence?: number;
+  /** Detected language code */
+  language?: string;
+  /** Audio duration in seconds */
+  duration?: number;
+  /** Error message if transcription failed */
+  error?: string;
+  /** Processing start timestamp */
+  started_at?: Date;
+  /** Processing completion timestamp */
+  completed_at?: Date;
+}
+
+/**
+ * Voice audio data for processing
+ */
+export interface VoiceAudioData {
+  /** Path to the temporary audio file */
+  filePath: string;
+  /** Audio duration in seconds */
+  duration: number;
+  /** MIME type of the audio */
+  mimeType: string;
+  /** File size in bytes */
+  size: number;
+  /** Timestamp when audio was recorded */
+  recorded_at: Date;
+}
+
+/**
  * Main application state interface that manages the entire lifecycle of an idea session
  * This state is passed between LangGraph nodes and represents the core data structure
  * for the entire application workflow.
@@ -97,6 +135,12 @@ export interface AppState {
   
   /** Optional: Current error state if any operation failed */
   error?: string;
+  
+  /** Optional: Voice audio data waiting to be processed */
+  voice_audio_data?: VoiceAudioData;
+  
+  /** Optional: Voice transcription status and results */
+  voice_transcription?: VoiceTranscription;
 }
 
 /**
@@ -203,7 +247,7 @@ export function createInitialAppState(idea_id: string, user_id?: string): AppSta
  * Utility function to validate AppState
  */
 export function validateAppState(state: any): state is AppState {
-  return (
+  const isValidBase = (
     typeof state === 'object' &&
     typeof state.idea_id === 'string' &&
     Array.isArray(state.messages) &&
@@ -212,4 +256,21 @@ export function validateAppState(state: any): state is AppState {
     typeof state.user_prompts === 'object' &&
     typeof state.selected_models === 'object'
   );
+
+  // Optional voice field validation
+  const isValidVoiceAudio = !state.voice_audio_data || (
+    state.voice_audio_data instanceof Object &&
+    typeof state.voice_audio_data.filePath === 'string' &&
+    typeof state.voice_audio_data.duration === 'number' &&
+    typeof state.voice_audio_data.mimeType === 'string' &&
+    typeof state.voice_audio_data.size === 'number' &&
+    state.voice_audio_data.recorded_at instanceof Date
+  );
+
+  const isValidVoiceTranscription = !state.voice_transcription || (
+    state.voice_transcription instanceof Object &&
+    ['processing', 'completed', 'failed'].includes(state.voice_transcription.status)
+  );
+
+  return isValidBase && isValidVoiceAudio && isValidVoiceTranscription;
 } 

@@ -13,7 +13,7 @@
  */
 
 import { Annotation } from '@langchain/langgraph';
-import { AppState, ChatMessage, WorkflowStage, UserAction, createInitialAppState } from '../../../src/types/AppState';
+import { AppState, ChatMessage, WorkflowStage, UserAction, createInitialAppState, VoiceAudioData, VoiceTranscription } from '../../../src/types/AppState';
 import { logger } from '../../../src/utils/logger';
 
 /**
@@ -135,6 +135,38 @@ export const AppStateAnnotation = Annotation.Root({
     reducer: (existing: string | undefined, update?: string) => {
       if (update) {
         console.log('❌ State: Error occurred', { error: update });
+      }
+      return update ?? existing;
+    },
+    default: () => undefined,
+  }),
+
+  /** Optional: Voice audio data waiting to be processed */
+  voice_audio_data: Annotation<AppState['voice_audio_data']>({
+    reducer: (existing: any, update?: any) => {
+      if (update) {
+        console.log('🎤 State: Voice audio data updated', { 
+          hasBlob: !!update.blob,
+          duration: update.duration,
+          mimeType: update.mimeType,
+          size: update.size
+        });
+      }
+      return update ?? existing;
+    },
+    default: () => undefined,
+  }),
+
+  /** Optional: Voice transcription status and results */
+  voice_transcription: Annotation<AppState['voice_transcription']>({
+    reducer: (existing: any, update?: any) => {
+      if (update) {
+        console.log('🗣️ State: Voice transcription updated', { 
+          status: update.status,
+          hasText: !!update.text,
+          language: update.language,
+          duration: update.duration
+        });
       }
       return update ?? existing;
     },
