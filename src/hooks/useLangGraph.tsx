@@ -220,19 +220,23 @@ const LangGraphContext = createContext<LangGraphContextValue | null>(null);
 export function LangGraphProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(langGraphReducer, initialState);
   const sessionInitializedRef = useRef(false);
+  const initializedSessionIdRef = useRef<string | null>(null);
 
   // Initialize session in main process
   useEffect(() => {
-    if (!sessionInitializedRef.current) {
+    const currentSessionId = state.appState.idea_id;
+    
+    if (!sessionInitializedRef.current || initializedSessionIdRef.current !== currentSessionId) {
       sessionInitializedRef.current = true;
+      initializedSessionIdRef.current = currentSessionId;
       
       const initSession = async () => {
         try {
           console.log('🚀 LangGraph Provider: Initializing session in main process', {
-            ideaId: state.appState.idea_id
+            ideaId: currentSessionId
           });
           
-          const session = await langgraphService.createSession(state.appState.idea_id);
+          const session = await langgraphService.createSession(currentSessionId);
           dispatch({ type: 'SET_STATE', payload: session });
           
           console.log('✅ LangGraph Provider: Session initialized', {
@@ -248,7 +252,7 @@ export function LangGraphProvider({ children }: { children: React.ReactNode }) {
       
       initSession();
     }
-  }, []);
+  }, []); // Empty dependency array - only run on mount
 
   /**
    * Execute workflow with error handling and metrics

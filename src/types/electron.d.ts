@@ -96,7 +96,7 @@ interface ElectronAudioAPI {
    * Save audio blob data to filesystem
    */
   saveAudioFile(
-    audioData: Buffer, 
+    audioData: Uint8Array | Buffer, 
     originalName?: string, 
     mimeType?: string
   ): Promise<{ 

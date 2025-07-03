@@ -309,7 +309,7 @@ async function analyzeUserResponse(
         
         // Consider item completed if GPT-4 confidence is high enough
         const itemScore = completionScores[criterionId] || 0;
-        if (itemScore >= 0.8) {  // High threshold for completion
+        if (itemScore >= 0.6) {  // Relaxed threshold for better user experience
           newlyCompletedItems.push(item.id);
         }
       }
@@ -323,6 +323,14 @@ async function analyzeUserResponse(
         newlyPartialItems.push(item.id);
       }
     }
+
+    // Log detailed scores for transparency
+    console.log('📊 COMPLETION SCORES:', completionScores);
+    console.log('📈 PROGRESS ANALYSIS:', {
+      addressed: addressedItems.map(id => `${id}: ${completionScores[id]?.toFixed(2) || 'N/A'}`),
+      completed: newlyCompletedItems.map(id => `${id}: ${completionScores[id]?.toFixed(2) || 'N/A'} ✅`),
+      partial: partialItems.map(id => `${id}: ${partialScores[id]?.toFixed(2) || 'N/A'} ⚠️`)
+    });
 
     console.log('🎯 ProcessUserTurn: GPT-4 analysis completed with partial detection', {
       addressedItems: addressedItems.length,

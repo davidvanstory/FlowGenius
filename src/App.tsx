@@ -291,7 +291,7 @@ function AppInner() {
     clearError();
   }, [clearError]);
 
-  // Log app initialization and state changes
+  // Log app initialization and state changes (only log on mount and unmount)
   useEffect(() => {
     logger.info('🚀 FlowGenius App component mounted with LangGraph', {
       sessionId: appState.idea_id,
@@ -306,9 +306,9 @@ function AppInner() {
         finalMessageCount: appState.messages.length
       });
     };
-  }, [appState.idea_id, appState.current_stage, appState.messages.length, sessions.length]);
+  }, []); // Empty dependency array - only run on mount/unmount
 
-  // Log LangGraph state changes for debugging
+  // Log LangGraph state changes for debugging (throttled)
   useEffect(() => {
     logger.debug('📊 LangGraph state changed', {
       stage: appState.current_stage,
@@ -319,10 +319,7 @@ function AppInner() {
     });
   }, [
     appState.current_stage, 
-    appState.messages.length, 
-    langGraphState.isExecuting, 
-    appState.last_user_action, 
-    langGraphState.error
+    appState.idea_id  // Only re-run when stage or session changes, not on every message
   ]);
 
   return (
@@ -414,7 +411,7 @@ function AppInner() {
                   onRecordingError={audioRecording.handleRecordingError}
                   onStateChange={audioRecording.handleRecordingStateChange}
                   disabled={isProcessing}
-                  autoStart={true}
+                  autoStart={false}
                 />
               </div>
             )}

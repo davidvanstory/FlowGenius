@@ -209,9 +209,10 @@ Identify criteria that have been partially addressed (0.3-0.7 completion score) 
 
 **COMPLETION SCORING GUIDELINES:**
 - 0.0-0.2: Not addressed or very minimal mention
-- 0.3-0.5: Partially addressed, needs significant follow-up
-- 0.6-0.7: Mostly addressed, could benefit from clarification
-- 0.8-1.0: Well addressed, sufficient detail provided
+- 0.3-0.4: Partially addressed, needs significant follow-up
+- 0.5-0.6: Moderately addressed, shows good understanding with room for detail
+- 0.7-0.8: Well addressed, sufficient detail for this stage
+- 0.9-1.0: Exceptionally detailed and comprehensive
 
 **CRITICAL: Start your reasoning with "Yoda Says:" to help with debugging.**
 
@@ -233,7 +234,7 @@ Example format:
   "reasoning": "Yoda Says: The user has clearly defined the core problem with their flying tractor idea..."
 }
 
-Be thorough but fair in your analysis. Users may address criteria implicitly or partially.`;
+Be thorough but fair in your analysis. Users may address criteria implicitly or partially. Give credit for demonstrating understanding of concepts even if not every detail is provided. Focus on encouraging progress while maintaining quality standards.`;
 
 /**
  * System prompt for question generation

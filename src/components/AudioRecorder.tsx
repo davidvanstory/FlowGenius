@@ -428,6 +428,13 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
         // Check max duration
         if (elapsed >= audioConfig.maxDurationSeconds) {
           logger.warn('⏰ AudioRecorder: Maximum recording duration reached');
+          
+          // Clear this interval immediately to prevent multiple warnings
+          if (durationIntervalRef.current) {
+            clearInterval(durationIntervalRef.current);
+            durationIntervalRef.current = null;
+          }
+          
           stopRecording();
         }
       }, 1000);
@@ -453,6 +460,19 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     logger.info('🛑 AudioRecorder: Stopping recording');
     updateRecordingState(RecordingState.STOPPING);
 
+    // Clear intervals immediately to stop any ongoing timers
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+      logger.debug('🕒 AudioRecorder: Duration tracking interval cleared during stop');
+    }
+
+    if (audioLevelIntervalRef.current) {
+      clearInterval(audioLevelIntervalRef.current);
+      audioLevelIntervalRef.current = null;
+      logger.debug('📊 AudioRecorder: Audio level monitoring interval cleared during stop');
+    }
+
     try {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
@@ -461,6 +481,8 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       logger.error('❌ AudioRecorder: Error stopping MediaRecorder', { 
         error: error instanceof Error ? error.message : String(error) 
       });
+      // If MediaRecorder.stop() fails, we still need to clean up
+      cleanupRecording();
     }
   }, [recordingState, updateRecordingState]);
 
@@ -612,7 +634,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       });
       startRecording();
     }
-  }, [autoStart, disabled]); // Removed recordingState and startRecording to avoid infinite loop
+  }, [autoStart, recordingState, disabled, startRecording]);
 
   /**
    * Cleanup on component unmount
