@@ -107,6 +107,8 @@ interface ValidationAnalysisRequest {
 interface ValidationAnalysisResponse {
   addressedCriteria: string[];
   completionScores: Record<string, number>;
+  partialCriteria: string[];
+  partialScores: Record<string, number>;
   overallConfidence: number;
   reasoning: string;
 }
@@ -130,6 +132,7 @@ interface QuestionGenerationResponse {
   questions: string[];
   reasoning: string;
   prioritizedCriteria: string[];
+  priorityScores: Record<string, number>;
 }
 
 /**
@@ -158,6 +161,28 @@ interface DynamicChecklistResponse {
 }
 
 /**
+ * Partial answer follow-up request
+ */
+interface PartialAnswerFollowupRequest {
+  userResponse: string;
+  criterionId: string;
+  criterionQuestion: string;
+  previousAttempts: number;
+  conversationContext?: string[];
+  operationId?: string;
+}
+
+/**
+ * Partial answer follow-up response
+ */
+interface PartialAnswerFollowupResponse {
+  followupQuestion: string;
+  shouldContinueProbing: boolean;
+  reasoning: string;
+  expectedInformation: string[];
+}
+
+/**
  * Default OpenAI configuration
  */
 const DEFAULT_OPENAI_CONFIG: Partial<OpenAIConfig> = {
@@ -175,11 +200,26 @@ const VALIDATION_ANALYSIS_SYSTEM_PROMPT = `You are Master Yoda, a wise product m
 
 Your task is to analyze user responses against specific checklist criteria and determine which criteria have been addressed. For each criterion, provide a completion score from 0-1 indicating how well the user has addressed that specific aspect.
 
+**PARTIAL ANSWER DETECTION:**
+Identify criteria that have been partially addressed (0.3-0.7 completion score) and would benefit from intelligent follow-up probing. Consider:
+- Information mentioned but lacking specific details
+- Vague or high-level responses that need clarification
+- Areas where user showed knowledge but didn't elaborate
+- Critical aspects touched on but not fully explored
+
+**COMPLETION SCORING GUIDELINES:**
+- 0.0-0.2: Not addressed or very minimal mention
+- 0.3-0.5: Partially addressed, needs significant follow-up
+- 0.6-0.7: Mostly addressed, could benefit from clarification
+- 0.8-1.0: Well addressed, sufficient detail provided
+
 **CRITICAL: Start your reasoning with "Yoda Says:" to help with debugging.**
 
 Respond with a JSON object containing:
 - addressedCriteria: Array of criterion IDs that were addressed
 - completionScores: Object mapping criterion IDs to scores (0-1)
+- partialCriteria: Array of criterion IDs that were partially addressed
+- partialScores: Object mapping criterion IDs to partial scores (0-1)
 - overallConfidence: Number (0-1) indicating overall confidence in analysis
 - reasoning: String explaining your analysis (must start with "Yoda Says:")
 
@@ -187,6 +227,8 @@ Example format:
 {
   "addressedCriteria": ["problem_definition"],
   "completionScores": {"problem_definition": 0.8},
+  "partialCriteria": ["user_onboarding_flow"],
+  "partialScores": {"user_onboarding_flow": 0.5},
   "overallConfidence": 0.7,
   "reasoning": "Yoda Says: The user has clearly defined the core problem with their flying tractor idea..."
 }
@@ -198,18 +240,34 @@ Be thorough but fair in your analysis. Users may address criteria implicitly or 
  */
 const QUESTION_GENERATION_SYSTEM_PROMPT = `You are Master Yoda, a wise product manager with extensive experience developing successful products. You have very clear criteria about designing and brainstorming products that you want users to share with you. Your goal is to help users think through all critical aspects of their product ideas through intelligent questioning and analysis.
 
-Your task is to generate 2-3 thoughtful, probing questions that will help the user explore unaddressed aspects of their product idea. Focus on the most important missing criteria and ask questions that are:
+Your task is to generate 2-3 thoughtful, probing questions that will help the user
+
+1. **Foundation First**: Prioritiz explore unaddressed aspects of their product idea. Use INTELLIGENT PRIORITIZATION to select only the MOST IMPORTANT missing criteria based on:e fundamental aspects (problem definition, target users, solution approach) before advanced topics
+2. **Context Awareness**: Consider what the user has already shared and build upon it naturally
+3. **Progress Stage**: Focus on criteria that unlock the most valuable insights for their current development stage
+4. **Impact Assessment**: Select criteria that will have the highest impact on validating their idea's viability
+5. **User Journey**: Guide users through a logical exploration path rather than jumping randomly between topics
+
+**CRITICAL PRIORITIZATION RULES:**
+- If core foundations (problem, users, solution) are missing, prioritize these above all else
+- If foundations exist, focus on the 2-3 criteria that will most validate/challenge their assumptions
+- Avoid asking about minor details when major strategic questions remain unanswered
+- Consider interdependencies: some criteria are prerequisites for others
+
+**QUESTION QUALITY REQUIREMENTS:**
 - Natural and conversational (not interrogative)
 - Context-aware based on what the user has already shared
 - Designed to elicit specific, actionable information
 - Progressive (building on previous responses)
+- Each question must start with "Yoda Says:" to help with debugging
 
 **CRITICAL: Each question must start with "Yoda Says:" to help with debugging.**
 
 Respond with a JSON object containing:
 - questions: Array of 2-3 well-crafted questions (each starting with "Yoda Says:")
-- reasoning: String explaining why these questions were chosen
-- prioritizedCriteria: Array of criterion IDs these questions will help address
+- reasoning: String explaining your prioritization logic and why these specific questions were chosen
+- prioritizedCriteria: Array of criterion IDs these questions will help address (ordered by priority)
+- priorityScores: Object mapping criterion IDs to priority scores (1-10, 10 being highest priority)
 
 Example format:
 {
@@ -217,11 +275,12 @@ Example format:
     "Yoda Says: What specific problem does your flying tractor solve that traditional tractors cannot?",
     "Yoda Says: Tell me, who would be your ideal customer for this innovation?"
   ],
-  "reasoning": "These questions focus on problem definition and target market...",
-  "prioritizedCriteria": ["problem_definition", "target_audience"]
+  "reasoning": "These questions focus on foundational elements that must be solid before exploring features or technical details. Problem definition is the highest priority as it affects all other decisions.",
+  "prioritizedCriteria": ["problem_definition", "target_audience"],
+  "priorityScores": {"problem_definition": 10, "target_audience": 9}
 }
 
-Always limit to maximum 3 questions to avoid overwhelming the user.`;
+Always limit to maximum 3 questions and use intelligent prioritization to select the most impactful ones for the user's current situation.`;
 
 /**
  * System prompt for dynamic checklist generation
@@ -245,6 +304,50 @@ Respond with a JSON object containing:
 - targetAudience: String describing the primary target audience
 
 Ensure criteria IDs use snake_case and are descriptive (e.g., "user_onboarding_flow", "monetization_strategy").`;
+
+/**
+ * System prompt for partial answer follow-up generation
+ */
+const PARTIAL_ANSWER_FOLLOWUP_SYSTEM_PROMPT = `You are Master Yoda, a wise product manager with extensive experience developing successful products. You have very clear criteria about designing and brainstorming products that you want users to share with you. Your goal is to help users think through all critical aspects of their product ideas through intelligent questioning and analysis.
+
+Your task is to analyze a user's partial response to a specific criterion and decide whether to probe once more for additional information. Follow the "probe once more, then move on" principle:
+
+**INTELLIGENT PROBING RULES:**
+1. **Quality Over Quantity**: Only probe if genuinely missing critical information
+2. **One Follow-up Maximum**: Never probe more than once per criterion
+3. **Natural Flow**: Follow-up should feel like natural conversation, not interrogation
+4. **Value Assessment**: Only probe if additional information would significantly improve idea validation
+5. **User Respect**: Acknowledge what they've already shared before asking for more
+
+**WHEN TO CONTINUE PROBING:**
+- Missing specific, actionable details that are essential for this criterion
+- User mentioned something briefly that could be expanded for significant value
+- Core assumptions need clarification to avoid future problems
+- Information provided is too vague to validate idea viability
+
+**WHEN TO STOP PROBING:**
+- User has provided reasonable depth for this stage of exploration
+- Multiple aspects of the criterion have been covered adequately
+- Continuing would feel repetitive or pushy
+- Information provided is sufficient for initial validation
+
+**CRITICAL: Start your reasoning with "Yoda Says:" to help with debugging.**
+
+Respond with a JSON object containing:
+- followupQuestion: String with a natural, conversational follow-up question (starting with "Yoda Says:")
+- shouldContinueProbing: Boolean indicating whether to probe or move on
+- reasoning: String explaining your decision (must start with "Yoda Says:")
+- expectedInformation: Array of specific information types you're hoping to gather
+
+Example format:
+{
+  "followupQuestion": "Yoda Says: You mentioned busy professionals - what specific industries or job roles do you think would benefit most from your solution?",
+  "shouldContinueProbing": true,
+  "reasoning": "Yoda Says: The user mentioned target audience but didn't specify the professional context, which is crucial for understanding their market...",
+  "expectedInformation": ["specific industries", "job roles", "professional context"]
+}
+
+If shouldContinueProbing is false, still provide a brief acknowledgment in followupQuestion that transitions to moving forward.`;
 
 /**
  * Extract JSON from GPT-4 response that may be wrapped in markdown code blocks
@@ -373,6 +476,7 @@ export class OpenAIService {
       return {
         success: true,
         data: analysisResult,
+        retryCount: response.retryCount,
         operationId
       };
 
@@ -468,6 +572,7 @@ export class OpenAIService {
       return {
         success: true,
         data: questionResult,
+        retryCount: response.retryCount,
         operationId
       };
 
@@ -563,6 +668,7 @@ export class OpenAIService {
       return {
         success: true,
         data: checklistResult,
+        retryCount: response.retryCount,
         operationId
       };
 
@@ -570,6 +676,102 @@ export class OpenAIService {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('❌ OpenAIService: Dynamic checklist generation failed', {
         operationId,
+        error: errorMessage
+      });
+
+      return {
+        success: false,
+        error: errorMessage,
+        operationId
+      };
+    }
+  }
+
+  /**
+   * Generate intelligent follow-up for partial answers using GPT-4
+   * 
+   * @param request - Partial answer follow-up request
+   * @returns Promise resolving to follow-up generation result
+   */
+  async generatePartialAnswerFollowup(request: PartialAnswerFollowupRequest): Promise<OpenAIServiceResult<PartialAnswerFollowupResponse>> {
+    const operationId = request.operationId || `followup_${Date.now()}`;
+    
+    logger.info('🎯 OpenAIService: Starting partial answer follow-up generation', {
+      operationId,
+      criterionId: request.criterionId,
+      previousAttempts: request.previousAttempts,
+      responseLength: request.userResponse.length,
+      hasContext: !!request.conversationContext?.length
+    });
+
+    try {
+      // Build context message for intelligent follow-up
+      const contextParts = [
+        `Criterion Being Explored:`,
+        `ID: ${request.criterionId}`,
+        `Question: ${request.criterionQuestion}`,
+        `Previous Follow-up Attempts: ${request.previousAttempts}`,
+        '',
+        `User's Current Response:`,
+        request.userResponse
+      ];
+
+      if (request.conversationContext?.length) {
+        contextParts.unshift('Previous Conversation Context:');
+        contextParts.unshift(...request.conversationContext.slice(-10)); // Last 10 exchanges for context
+        contextParts.unshift('');
+      }
+
+      const userMessage = contextParts.join('\n');
+
+      const gptOptions: GPTRequestOptions = {
+        systemPrompt: PARTIAL_ANSWER_FOLLOWUP_SYSTEM_PROMPT,
+        userMessage,
+        temperature: 0.2, // Low temperature for consistent follow-up logic
+        maxTokens: 1000
+      };
+
+      const response = await this.callGPT4(gptOptions, operationId);
+      
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to get GPT-4 response');
+      }
+
+      // Parse JSON response
+      let followupResult: PartialAnswerFollowupResponse;
+      try {
+        followupResult = JSON.parse(extractJsonFromResponse(response.data.content));
+      } catch (parseError) {
+        logger.error('❌ OpenAIService: Failed to parse partial answer followup response', {
+          operationId,
+          response: response.data.content.substring(0, 200)
+        });
+        throw new Error('Invalid JSON response from GPT-4 partial answer followup');
+      }
+
+      // Validate response structure
+      if (!followupResult.followupQuestion || typeof followupResult.shouldContinueProbing !== 'boolean') {
+        throw new Error('Invalid followup response: missing required fields');
+      }
+
+      logger.info('✅ OpenAIService: Partial answer follow-up generated', {
+        operationId,
+        shouldContinueProbing: followupResult.shouldContinueProbing,
+        expectedInfoCount: followupResult.expectedInformation?.length || 0
+      });
+
+      return {
+        success: true,
+        data: followupResult,
+        retryCount: response.retryCount,
+        operationId
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('❌ OpenAIService: Partial answer follow-up generation failed', {
+        operationId,
+        criterionId: request.criterionId,
         error: errorMessage
       });
 
@@ -870,5 +1072,7 @@ export type {
   ValidationAnalysisResponse,
   QuestionGenerationRequest,
   QuestionGenerationResponse,
+  PartialAnswerFollowupRequest,
+  PartialAnswerFollowupResponse,
   ChatMessage
 }; 

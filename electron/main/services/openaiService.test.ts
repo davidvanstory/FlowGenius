@@ -69,6 +69,29 @@ const mockGPTResponse = {
   model: 'gpt-4o'
 };
 
+// Mock successful partial answer follow-up response
+const mockPartialFollowupResponse = {
+  choices: [
+    {
+      message: {
+        content: JSON.stringify({
+          followupQuestion: 'Yoda Says: You mentioned busy professionals - what specific industries or job roles would benefit most from your solution?',
+          shouldContinueProbing: true,
+          reasoning: 'Yoda Says: The user provided a general target audience but lacked specific industry context which is crucial for market validation.',
+          expectedInformation: ['specific industries', 'job roles', 'professional context']
+        })
+      },
+      finish_reason: 'stop'
+    }
+  ],
+  usage: {
+    prompt_tokens: 150,
+    completion_tokens: 75,
+    total_tokens: 225
+  },
+  model: 'gpt-4o'
+};
+
 // Mock successful question generation response
 const mockQuestionResponse = {
   choices: [
@@ -76,11 +99,15 @@ const mockQuestionResponse = {
       message: {
         content: JSON.stringify({
           questions: [
-            'What specific pain points do your target users experience with current solutions?',
-            'How would you prioritize the key features based on user feedback?'
+            'Yoda Says: What specific pain points do your target users experience with current solutions?',
+            'Yoda Says: How would you prioritize the key features based on user feedback?'
           ],
-          reasoning: 'These questions focus on understanding user needs and feature prioritization.',
-          prioritizedCriteria: ['user_pain_points', 'key_features']
+          reasoning: 'These questions focus on understanding user needs and feature prioritization. User needs assessment is highest priority as it drives all feature decisions.',
+          prioritizedCriteria: ['user_pain_points', 'key_features'],
+          priorityScores: {
+            'user_pain_points': 9,
+            'key_features': 7
+          }
         })
       },
       finish_reason: 'stop'
@@ -90,6 +117,31 @@ const mockQuestionResponse = {
     prompt_tokens: 180,
     completion_tokens: 60,
     total_tokens: 240
+  },
+  model: 'gpt-4o'
+};
+
+// Mock successful validation analysis response
+const mockAnalysisResponse = {
+  choices: [
+    {
+      message: {
+        content: JSON.stringify({
+          addressedCriteria: ['problem_definition'],
+          completionScores: { 'problem_definition': 0.85 },
+          partialCriteria: ['target_audience'],
+          partialScores: { 'target_audience': 0.6 },
+          overallConfidence: 0.8,
+          reasoning: 'Yoda Says: The user has clearly defined the problem but provided only general information about target audience.'
+        })
+      },
+      finish_reason: 'stop'
+    }
+  ],
+  usage: {
+    prompt_tokens: 160,
+    completion_tokens: 70,
+    total_tokens: 230
   },
   model: 'gpt-4o'
 };
@@ -163,15 +215,19 @@ describe('OpenAIService', () => {
       
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockGPTResponse)
+        json: () => Promise.resolve(mockAnalysisResponse)
       });
 
       const result = await openaiService.analyzeValidation(mockRequest);
 
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
-      expect(result.data?.addressedCriteria).toEqual(['problem_definition', 'target_audience']);
-      expect(result.data?.overallConfidence).toBe(0.7);
+      expect(result.data?.addressedCriteria).toEqual(['problem_definition']);
+      expect(result.data?.completionScores['problem_definition']).toBe(0.85);
+      expect(result.data?.partialCriteria).toEqual(['target_audience']);
+      expect(result.data?.partialScores['target_audience']).toBe(0.6);
+      expect(result.data?.overallConfidence).toBe(0.8);
+      expect(result.data?.reasoning).toContain('Yoda Says:');
       expect(result.operationId).toBe('test_validation_123');
 
       // Verify API call was made correctly
@@ -191,18 +247,28 @@ describe('OpenAIService', () => {
     it('should handle API error responses', async () => {
       console.log('🧪 Testing API error handling');
       
-      mockFetch.mockResolvedValueOnce({
+      // Create a properly structured mock error response
+      const mockErrorResponse = {
         ok: false,
         status: 400,
         statusText: 'Bad Request',
-        json: () => Promise.resolve({ error: 'Invalid request' })
-      });
+        json: vi.fn().mockResolvedValue({ 
+          error: { 
+            message: 'Invalid request parameters',
+            type: 'invalid_request_error'
+          }
+        })
+      };
+
+      mockFetch.mockResolvedValue(mockErrorResponse);
 
       const result = await openaiService.analyzeValidation(mockRequest);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('GPT-4 API error: 400 Bad Request');
+      expect(result.error).toContain('400');
+      expect(result.error).toContain('Bad Request');
       expect(result.data).toBeUndefined();
+      expect(mockErrorResponse.json).toHaveBeenCalled();
     });
 
     it('should handle JSON parsing errors', async () => {
@@ -234,19 +300,43 @@ describe('OpenAIService', () => {
     it('should retry on retryable errors', async () => {
       console.log('🧪 Testing retry logic on retryable errors');
       
-      // First call fails with network error
-      mockFetch
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockGPTResponse)
-        });
+      // Use a shorter retry delay for faster testing
+      const fastRetryService = new OpenAIService({
+        ...validConfig,
+        retryDelay: 10, // Very short delay for testing
+        maxRetries: 2
+      });
 
-      const result = await openaiService.analyzeValidation(mockRequest);
+      // First call fails with retryable error
+      const mockRetryableErrorResponse = {
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
+        json: vi.fn().mockResolvedValue({ 
+          error: { 
+            message: 'Service temporarily unavailable',
+            type: 'server_error'
+          }
+        })
+      };
+
+      // Second call succeeds
+      const mockSuccessResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue(mockAnalysisResponse)
+      };
+
+      mockFetch
+        .mockResolvedValueOnce(mockRetryableErrorResponse)
+        .mockResolvedValueOnce(mockSuccessResponse);
+
+      const result = await fastRetryService.analyzeValidation(mockRequest);
 
       expect(result.success).toBe(true);
       expect(result.retryCount).toBe(1);
       expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockRetryableErrorResponse.json).toHaveBeenCalled();
+      expect(mockSuccessResponse.json).toHaveBeenCalled();
     });
 
     it('should not retry on authentication errors', async () => {
@@ -259,6 +349,33 @@ describe('OpenAIService', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('invalid api key');
       expect(mockFetch).toHaveBeenCalledTimes(1); // No retry
+    });
+
+    it('should handle missing choices in API response', async () => {
+      console.log('🧪 Testing missing choices handling');
+      
+      const noChoicesResponse = {
+        choices: [], // Empty choices array
+        usage: {
+          prompt_tokens: 10,
+          completion_tokens: 0,
+          total_tokens: 10
+        },
+        model: 'gpt-4o'
+      };
+
+      const mockNoChoicesResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue(noChoicesResponse)
+      };
+
+      mockFetch.mockResolvedValue(mockNoChoicesResponse);
+
+      const result = await openaiService.analyzeValidation(mockRequest);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('No choices returned from GPT-4 API');
+      expect(mockNoChoicesResponse.json).toHaveBeenCalled();
     });
   });
 
@@ -290,8 +407,12 @@ describe('OpenAIService', () => {
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
       expect(result.data?.questions).toHaveLength(2);
+      expect(result.data?.questions[0]).toContain('Yoda Says:');
       expect(result.data?.questions[0]).toContain('pain points');
       expect(result.data?.prioritizedCriteria).toContain('user_pain_points');
+      expect(result.data?.priorityScores).toBeDefined();
+      expect(result.data?.priorityScores['user_pain_points']).toBe(9);
+      expect(result.data?.priorityScores['key_features']).toBe(7);
       expect(result.operationId).toBe('test_questions_456');
     });
 
@@ -305,14 +426,21 @@ describe('OpenAIService', () => {
             message: {
               content: JSON.stringify({
                 questions: [
-                  'Question 1?',
-                  'Question 2?',
-                  'Question 3?',
-                  'Question 4?',
-                  'Question 5?'
+                  'Yoda Says: Question 1?',
+                  'Yoda Says: Question 2?',
+                  'Yoda Says: Question 3?',
+                  'Yoda Says: Question 4?',
+                  'Yoda Says: Question 5?'
                 ],
-                reasoning: 'Many questions generated',
-                prioritizedCriteria: ['criteria1', 'criteria2']
+                reasoning: 'Many questions generated for testing prioritization.',
+                prioritizedCriteria: ['criteria1', 'criteria2', 'criteria3', 'criteria4', 'criteria5'],
+                priorityScores: {
+                  'criteria1': 10,
+                  'criteria2': 8,
+                  'criteria3': 6,
+                  'criteria4': 4,
+                  'criteria5': 2
+                }
               })
             },
             finish_reason: 'stop'
@@ -337,7 +465,11 @@ describe('OpenAIService', () => {
     it('should handle network timeout', async () => {
       console.log('🧪 Testing network timeout handling');
       
-      mockFetch.mockRejectedValueOnce(new Error('AbortError: The operation was aborted'));
+      // Mock timeout error that would be thrown by AbortSignal.timeout
+      const timeoutError = new Error('The operation was aborted due to timeout');
+      timeoutError.name = 'AbortError';
+      
+      mockFetch.mockRejectedValue(timeoutError);
 
       const result = await openaiService.generateQuestions(mockRequest);
 
@@ -454,28 +586,6 @@ describe('OpenAIService', () => {
   });
 
   describe('Error Handling Edge Cases', () => {
-    it('should handle missing choices in API response', async () => {
-      console.log('🧪 Testing missing choices handling');
-      
-      const invalidResponse = {
-        ...mockGPTResponse,
-        choices: []
-      };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(invalidResponse)
-      });
-
-      const result = await openaiService.analyzeValidation({
-        userResponse: 'Test',
-        checklistCriteria: ['test']
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('No choices returned from GPT-4 API');
-    });
-
     it('should handle quota exceeded errors without retry', async () => {
       console.log('🧪 Testing quota exceeded error handling');
       
@@ -629,22 +739,29 @@ describe('OpenAIService', () => {
 
     it('should handle dynamic checklist generation errors gracefully', async () => {
       console.log('🧪 Testing dynamic checklist generation error handling');
-
-      mockFetch.mockResolvedValueOnce({
+      
+      const mockErrorResponse = {
         ok: false,
-        status: 429,
-        statusText: 'Too Many Requests',
-        json: async () => ({ error: 'Rate limit exceeded' })
-      });
-
-      const request = {
-        userIdea: 'Test idea'
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: vi.fn().mockResolvedValue({ 
+          error: { 
+            message: 'Internal server error occurred',
+            type: 'server_error'
+          }
+        })
       };
 
-      const result = await openaiService.generateDynamicChecklist(request);
+      mockFetch.mockResolvedValue(mockErrorResponse);
+
+      const result = await openaiService.generateDynamicChecklist({
+        userIdea: 'Test idea that should trigger server error'
+      });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('GPT-4 API error');
+      expect(result.error).toContain('500');
+      expect(result.error).toContain('Internal Server Error');
+      expect(mockErrorResponse.json).toHaveBeenCalled();
     });
 
     it('should handle invalid JSON response', async () => {
@@ -704,6 +821,145 @@ describe('OpenAIService', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('missing or invalid generatedCriteria');
+    });
+  });
+
+  describe('generatePartialAnswerFollowup', () => {
+    const mockPartialFollowupRequest = {
+      userResponse: 'My app is for busy professionals who need better productivity tools.',
+      criterionId: 'target_audience',
+      criterionQuestion: 'Who is your target audience and what are their specific characteristics?',
+      previousAttempts: 0,
+      conversationContext: ['Tell me about your app idea', 'My app is for busy professionals...'],
+      operationId: 'test_partial_followup'
+    };
+
+    it('should successfully generate partial answer follow-up', async () => {
+      console.log('🧪 Testing partial answer follow-up generation');
+      
+      const mockSuccessResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue(mockPartialFollowupResponse)
+      };
+
+      mockFetch.mockResolvedValue(mockSuccessResponse);
+
+      const result = await openaiService.generatePartialAnswerFollowup(mockPartialFollowupRequest);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result.data?.followupQuestion).toContain('Yoda Says:');
+      expect(result.data?.followupQuestion).toContain('professionals');
+      expect(result.data?.shouldContinueProbing).toBe(true);
+      expect(result.data?.reasoning).toContain('Yoda Says:');
+      expect(result.data?.expectedInformation).toContain('specific industries');
+      expect(mockSuccessResponse.json).toHaveBeenCalled();
+      
+      // Verify the API call was made correctly
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.openai.com/v1/chat/completions',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer sk-test123456789abcdef'
+          }),
+          body: expect.stringContaining('target_audience')
+        })
+      );
+    });
+
+    it('should handle API errors gracefully', async () => {
+      console.log('🧪 Testing partial answer follow-up API error handling');
+      
+      const mockErrorResponse = {
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        json: vi.fn().mockResolvedValue({ 
+          error: { 
+            message: 'Rate limit exceeded for requests',
+            type: 'rate_limit_error' 
+          }
+        })
+      };
+
+      mockFetch.mockResolvedValue(mockErrorResponse);
+
+      const result = await openaiService.generatePartialAnswerFollowup(mockPartialFollowupRequest);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('429');
+      expect(result.error).toContain('Too Many Requests');
+      expect(mockErrorResponse.json).toHaveBeenCalled();
+    });
+
+    it('should handle should not probe response', async () => {
+      console.log('🧪 Testing partial answer follow-up should not probe');
+      
+      const noProbeResponse = {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                followupQuestion: 'Yoda Says: I understand your target audience well. Let\'s explore another aspect.',
+                shouldContinueProbing: false,
+                reasoning: 'Yoda Says: The user provided sufficient detail about their target audience for initial validation.',
+                expectedInformation: []
+              })
+            },
+            finish_reason: 'stop'
+          }
+        ],
+        usage: {
+          prompt_tokens: 120,
+          completion_tokens: 50,
+          total_tokens: 170
+        },
+        model: 'gpt-4o'
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(noProbeResponse)
+      });
+
+      const result = await openaiService.generatePartialAnswerFollowup(mockPartialFollowupRequest);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.shouldContinueProbing).toBe(false);
+      expect(result.data?.followupQuestion).toContain('Let\'s explore another aspect');
+    });
+
+    it('should handle invalid JSON response', async () => {
+      console.log('🧪 Testing partial answer follow-up invalid JSON handling');
+      
+      const invalidJsonResponse = {
+        choices: [
+          { 
+            message: { 
+              content: 'Invalid JSON response here - not a proper JSON object' 
+            },
+            finish_reason: 'stop'
+          }
+        ],
+        usage: {
+          prompt_tokens: 100,
+          completion_tokens: 20,
+          total_tokens: 120
+        },
+        model: 'gpt-4o'
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(invalidJsonResponse)
+      });
+
+      const result = await openaiService.generatePartialAnswerFollowup(mockPartialFollowupRequest);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid JSON');
     });
   });
 });

@@ -14,9 +14,10 @@ export default defineConfig({
     // Include both e2e tests and unit tests
     include: [
       'test/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      'src/**/*.{test,spec}.?(c|m)[jt]s?(x)'
+      'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      'electron/**/*.{test,spec}.?(c|m)[jt]s?(x)'
     ],
-    testTimeout: 1000 * 29,
+    testTimeout: 1000 * 45, // Increased timeout for real GPT-4 API calls
     // Configure environment for React component testing
     environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],

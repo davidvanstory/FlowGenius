@@ -122,6 +122,8 @@ export async function processUserTurn(state: AppState): Promise<Partial<AppState
     console.log('📊 ProcessUserTurn: Analysis result', {
       addressedItems: analysisResult.addressedItems,
       newlyCompletedItems: analysisResult.newlyCompletedItems,
+      partialItems: analysisResult.partialItems,
+      newlyPartialItems: analysisResult.newlyPartialItems,
       confidence: analysisResult.confidence
     });
 
@@ -218,6 +220,8 @@ function initializeChecklist(): ChecklistState {
     completed_items: [],
     active_items: [],
     followup_count: 0,
+    criterion_followups: {},
+    partial_items: [],
     is_complete: false,
     progress: 0
   };
@@ -229,7 +233,7 @@ function initializeChecklist(): ChecklistState {
  * @param userResponse - The user's message content
  * @param checklistState - Current checklist state
  * @param conversationContext - Recent conversation context for GPT-4 analysis
- * @returns Analysis result with addressed items and confidence
+ * @returns Analysis result with addressed items, partial items, and confidence
  */
 async function analyzeUserResponse(
   userResponse: string, 
@@ -238,9 +242,11 @@ async function analyzeUserResponse(
 ): Promise<{
   addressedItems: string[];
   newlyCompletedItems: string[];
+  partialItems: string[];
+  newlyPartialItems: string[];
   confidence: number;
 }> {
-  console.log('🤖 ProcessUserTurn: Analyzing user response with GPT-4');
+  console.log('🤖 ProcessUserTurn: Analyzing user response with GPT-4 for partial answer detection');
   
   try {
     // Initialize OpenAI service
@@ -256,11 +262,13 @@ async function analyzeUserResponse(
       return {
         addressedItems: [],
         newlyCompletedItems: [],
+        partialItems: [],
+        newlyPartialItems: [],
         confidence: 1.0
       };
     }
 
-    console.log('📋 ProcessUserTurn: Analyzing against criteria', {
+    console.log('📋 ProcessUserTurn: Analyzing against criteria with partial detection', {
       criteriaCount: checklistCriteria.length,
       responseLength: userResponse.length,
       hasContext: !!conversationContext?.length
@@ -275,22 +283,25 @@ async function analyzeUserResponse(
     });
 
     if (!analysisResult.success || !analysisResult.data) {
-      console.log('⚠️ ProcessUserTurn: GPT-4 analysis failed, falling back to basic analysis');
-      logger.warn('GPT-4 analysis failed in processUserTurn', {
+      console.log('❌ ProcessUserTurn: GPT-4 analysis failed - throwing error');
+      logger.error('GPT-4 analysis failed in processUserTurn', {
         error: analysisResult.error,
         userResponseLength: userResponse.length
       });
       
-      // Fallback to basic analysis if GPT-4 fails
-      return fallbackAnalyzeUserResponse(userResponse, checklistState);
+      // Throw error instead of falling back
+      throw new Error(`GPT-4 analysis failed: ${analysisResult.error}`);
     }
 
-    const { addressedCriteria, completionScores, overallConfidence } = analysisResult.data;
+    const { addressedCriteria, completionScores, partialCriteria, partialScores, overallConfidence } = analysisResult.data;
 
-    // Convert addressed criteria back to item IDs and determine completion
+    // Convert addressed criteria to item IDs and determine completion
     const addressedItems: string[] = [];
     const newlyCompletedItems: string[] = [];
+    const partialItems: string[] = [];
+    const newlyPartialItems: string[] = [];
 
+    // Process fully addressed criteria
     for (const criterionId of addressedCriteria) {
       const item = checklistState.config.items.find(item => item.id === criterionId);
       if (item && !checklistState.completed_items.includes(item.id)) {
@@ -298,27 +309,40 @@ async function analyzeUserResponse(
         
         // Consider item completed if GPT-4 confidence is high enough
         const itemScore = completionScores[criterionId] || 0;
-        if (itemScore >= 0.6) {  // Higher threshold than keyword matching
+        if (itemScore >= 0.8) {  // High threshold for completion
           newlyCompletedItems.push(item.id);
         }
       }
     }
 
-    console.log('🎯 ProcessUserTurn: GPT-4 analysis completed', {
+    // Process partially addressed criteria
+    for (const criterionId of partialCriteria) {
+      const item = checklistState.config.items.find(item => item.id === criterionId);
+      if (item && !checklistState.completed_items.includes(item.id) && !checklistState.partial_items.includes(item.id)) {
+        partialItems.push(item.id);
+        newlyPartialItems.push(item.id);
+      }
+    }
+
+    console.log('🎯 ProcessUserTurn: GPT-4 analysis completed with partial detection', {
       addressedItems: addressedItems.length,
       newlyCompletedItems: newlyCompletedItems.length,
+      partialItems: partialItems.length,
+      newlyPartialItems: newlyPartialItems.length,
       overallConfidence
     });
 
     return {
       addressedItems,
       newlyCompletedItems,
+      partialItems,
+      newlyPartialItems,
       confidence: overallConfidence
     };
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.log('❌ ProcessUserTurn: Error in GPT-4 analysis, falling back', {
+    console.log('❌ ProcessUserTurn: Error in GPT-4 analysis - throwing error', {
       error: errorMessage
     });
     
@@ -327,66 +351,12 @@ async function analyzeUserResponse(
       userResponseLength: userResponse.length
     });
 
-    // Fallback to basic analysis if there's an error
-    return fallbackAnalyzeUserResponse(userResponse, checklistState);
+    // Throw error instead of falling back
+    throw new Error(`GPT-4 analysis error: ${errorMessage}`);
   }
 }
 
-/**
- * Fallback analysis using basic keyword matching when GPT-4 is unavailable
- * 
- * @param userResponse - The user's message content
- * @param checklistState - Current checklist state
- * @returns Basic analysis result
- */
-function fallbackAnalyzeUserResponse(userResponse: string, checklistState: ChecklistState): {
-  addressedItems: string[];
-  newlyCompletedItems: string[];
-  confidence: number;
-} {
-  console.log('🔄 ProcessUserTurn: Using fallback keyword-based analysis');
-  
-  const response = userResponse.toLowerCase();
-  const addressedItems: string[] = [];
-  const newlyCompletedItems: string[] = [];
-  let totalConfidence = 0;
 
-  // Check each incomplete checklist item
-  for (const item of checklistState.config.items) {
-    if (checklistState.completed_items.includes(item.id)) {
-      continue; // Skip already completed items
-    }
-
-    // Check if any keywords match
-    const matchedKeywords = item.keywords.filter(keyword => 
-      response.includes(keyword.toLowerCase())
-    );
-
-    if (matchedKeywords.length > 0) {
-      addressedItems.push(item.id);
-      
-      // Calculate confidence based on keyword matches and response length
-      const keywordConfidence = matchedKeywords.length / item.keywords.length;
-      const lengthConfidence = Math.min(response.length / 50, 1);
-      const itemConfidence = (keywordConfidence + lengthConfidence) / 2;
-      
-      totalConfidence += itemConfidence;
-      
-      // Consider item newly completed if confidence is high enough
-      if (itemConfidence > 0.4) {
-        newlyCompletedItems.push(item.id);
-      }
-    }
-  }
-
-  const overallConfidence = addressedItems.length > 0 ? totalConfidence / addressedItems.length : 0;
-
-  return {
-    addressedItems,
-    newlyCompletedItems,
-    confidence: overallConfidence
-  };
-}
 
 /**
  * Update checklist state based on analysis results
@@ -398,7 +368,7 @@ function fallbackAnalyzeUserResponse(userResponse: string, checklistState: Check
  */
 function updateChecklistFromAnalysis(
   checklistState: ChecklistState,
-  analysisResult: { addressedItems: string[]; newlyCompletedItems: string[]; confidence: number },
+  analysisResult: { addressedItems: string[]; newlyCompletedItems: string[]; partialItems: string[]; newlyPartialItems: string[]; confidence: number },
   userResponse: string
 ): ChecklistState {
   console.log('🔄 ProcessUserTurn: Updating checklist from analysis');
@@ -430,6 +400,29 @@ function updateChecklistFromAnalysis(
     }
   }
 
+  // Mark newly partial items
+  for (const itemId of analysisResult.newlyPartialItems) {
+    if (!updatedCompletedItems.includes(itemId) && !checklistState.partial_items.includes(itemId)) {
+      // Add to partial items list but don't mark as completed
+      // Update the item in the config with partial response
+      const itemIndex = updatedConfig.items.findIndex(item => item.id === itemId);
+      if (itemIndex !== -1) {
+        const existingItem = updatedConfig.items[itemIndex];
+        if (existingItem) {
+          updatedConfig.items[itemIndex] = {
+            id: existingItem.id,
+            question: existingItem.question,
+            keywords: existingItem.keywords,
+            priority: existingItem.priority,
+            completed: false, // Not fully completed yet
+            response: userResponse.substring(0, 200), // Store first 200 chars
+            completed_at: undefined // Don't set completion date for partial items
+          };
+        }
+      }
+    }
+  }
+
   // Calculate progress
   const progress = Math.round((updatedCompletedItems.length / checklistState.config.items.length) * 100);
   
@@ -439,11 +432,22 @@ function updateChecklistFromAnalysis(
   // Update active items to focus on highest priority uncompleted items
   const activeItems = getNextActiveItems(updatedConfig.items, updatedCompletedItems);
 
+  // Update partial items list
+  const updatedPartialItems = [
+    ...checklistState.partial_items.filter(id => !updatedCompletedItems.includes(id)), // Keep existing partial items that aren't completed
+    ...analysisResult.newlyPartialItems // Add newly identified partial items
+  ];
+
+  // Update criterion followups tracking
+  const updatedCriterionFollowups = { ...checklistState.criterion_followups };
+
   return {
     ...checklistState,
     config: updatedConfig,
     completed_items: updatedCompletedItems,
     active_items: activeItems,
+    partial_items: updatedPartialItems,
+    criterion_followups: updatedCriterionFollowups,
     progress,
     is_complete: isComplete,
     last_addressed_item: analysisResult.newlyCompletedItems[0] || checklistState.last_addressed_item
@@ -471,6 +475,7 @@ function getNextActiveItems(items: ChecklistItem[], completedItems: string[]): s
 
 /**
  * Generate an intelligent response using GPT-4 based on checklist state and conversation context
+ * Enhanced with intelligent partial answer follow-up probing (Task 1.9)
  * 
  * @param state - Current application state
  * @param userMessage - The user's message
@@ -482,7 +487,7 @@ async function generateChecklistBasedResponse(
   userMessage: ChatMessage,
   checklistState: ChecklistState
 ): Promise<string> {
-  console.log('🤖 ProcessUserTurn: Generating GPT-4 powered response');
+  console.log('🤖 ProcessUserTurn: Generating GPT-4 powered response with partial answer detection');
 
   try {
     // If checklist is complete, use GPT-4 for personalized congratulations
@@ -490,22 +495,43 @@ async function generateChecklistBasedResponse(
       return await generateCompletionResponse(state, checklistState);
     }
 
-    // Use GPT-4 to generate intelligent, context-aware questions
+    // First, check if we should follow up on any partial answers
+    console.log('🎯 ProcessUserTurn: Checking for partial answer follow-up opportunities', {
+      partialItems: checklistState.partial_items.length,
+      criterionFollowups: Object.keys(checklistState.criterion_followups).length
+    });
+
+    const partialFollowupResponse = await handlePartialAnswerFollowup(state, userMessage, checklistState);
+    
+    if (partialFollowupResponse) {
+      console.log('📍 ProcessUserTurn: Generated partial answer follow-up', {
+        lastProbedItem: checklistState.last_probed_item,
+        followupLength: partialFollowupResponse.length
+      });
+
+      // Add progress indicator for follow-up responses
+      let response = partialFollowupResponse;
+      response += `\n\n📊 Progress: ${checklistState.progress}% complete (${checklistState.completed_items.length}/${checklistState.config.items.length} areas covered)`;
+      
+      return response;
+    }
+
+    // If no partial follow-up needed, use GPT-4 to generate intelligent, context-aware questions
     return await generateIntelligentQuestions(state, userMessage, checklistState);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.log('⚠️ ProcessUserTurn: GPT-4 response generation failed, using fallback', {
+    console.log('❌ ProcessUserTurn: GPT-4 response generation failed - throwing error', {
       error: errorMessage
     });
     
-    logger.warn('GPT-4 response generation failed in processUserTurn', {
+    logger.error('GPT-4 response generation failed in processUserTurn', {
       error: errorMessage,
       checklistProgress: checklistState.progress
     });
 
-    // Fallback to basic response generation
-    return generateFallbackResponse(checklistState);
+    // Throw error instead of falling back
+    throw new Error(`GPT-4 service unavailable: ${errorMessage}`);
   }
 }
 
@@ -565,12 +591,12 @@ Keep it conversational and encouraging, about 3-4 sentences.`;
       return response.data.questions[0];
     }
 
-    // Fallback if GPT-4 fails
-    return generateFallbackCompletionResponse(checklistState);
+    // Throw error if GPT-4 fails
+    throw new Error('GPT-4 completion response generation failed');
 
   } catch (error) {
     console.log('❌ ProcessUserTurn: Error generating completion response');
-    return generateFallbackCompletionResponse(checklistState);
+    throw new Error(`GPT-4 completion response error: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -587,23 +613,28 @@ async function generateIntelligentQuestions(
   userMessage: ChatMessage,
   checklistState: ChecklistState
 ): Promise<string> {
-  console.log('💭 ProcessUserTurn: Generating intelligent questions with GPT-4');
+  console.log('💭 ProcessUserTurn: Generating intelligent questions with GPT-4 prioritization');
 
   const openaiService = createOpenAIService();
 
-  // Build lists for GPT-4
-  const allCriteria = checklistState.config.items.map(item => `${item.id}: ${item.question}`);
+  // Build lists for GPT-4 with priority-aware ordering
+  const allCriteria = checklistState.config.items
+    .sort((a, b) => b.priority - a.priority) // Sort by priority for better context
+    .map(item => `${item.id}: ${item.question}`);
+    
   const unaddressedCriteria = checklistState.config.items
     .filter(item => !checklistState.completed_items.includes(item.id))
+    .sort((a, b) => b.priority - a.priority) // Prioritize by importance
     .map(item => `${item.id}: ${item.question}`);
 
   const conversationContext = state.messages.map(m => m.content);
 
-  console.log('📊 ProcessUserTurn: GPT-4 question generation request', {
+  console.log('📊 ProcessUserTurn: GPT-4 question prioritization request', {
     totalCriteria: allCriteria.length,
     unaddressedCriteria: unaddressedCriteria.length,
     progress: checklistState.progress,
-    contextMessages: conversationContext.length
+    contextMessages: conversationContext.length,
+    highestPriorityUnaddressed: unaddressedCriteria[0]?.split(':')[0] || 'none'
   });
 
   const questionResult = await openaiService.generateQuestions({
@@ -611,7 +642,7 @@ async function generateIntelligentQuestions(
     checklistCriteria: allCriteria,
     unaddressedCriteria,
     conversationContext,
-    maxQuestions: 2, // Limit to 2 questions to avoid overwhelming
+    maxQuestions: 3, // Allow up to 3 but GPT-4 will intelligently prioritize to 2-3 most important
     operationId: `questions_${Date.now()}`
   });
 
@@ -619,9 +650,9 @@ async function generateIntelligentQuestions(
     throw new Error(questionResult.error || 'Failed to generate questions');
   }
 
-  const { questions, reasoning } = questionResult.data;
+  const { questions, reasoning, prioritizedCriteria, priorityScores } = questionResult.data;
 
-  // Build intelligent response
+  // Build intelligent response with prioritization context
   let response = "";
 
   // Acknowledge progress if items were addressed
@@ -632,74 +663,36 @@ async function generateIntelligentQuestions(
     }
   }
 
-  // Add GPT-4 generated questions
+  // Add GPT-4 generated questions with prioritization awareness
   if (questions.length > 0) {
     response += questions.join('\n\n');
+    
+    // Add subtle prioritization context for debugging/transparency
+    console.log('🎯 ProcessUserTurn: GPT-4 question prioritization results', {
+      questionCount: questions.length,
+      topPriorityCriteria: prioritizedCriteria.slice(0, 3),
+      maxPriorityScore: Math.max(...Object.values(priorityScores || {})),
+      reasoning: reasoning.substring(0, 100)
+    });
+  } else {
+    // Fallback if no questions generated
+    response += "Yoda Says: Excellent progress! You've covered the key areas comprehensively.";
   }
 
   // Add progress indicator
   response += `\n\n📊 Progress: ${checklistState.progress}% complete (${checklistState.completed_items.length}/${checklistState.config.items.length} areas covered)`;
 
-  console.log('✅ ProcessUserTurn: GPT-4 response generated', {
+  console.log('✅ ProcessUserTurn: GPT-4 prioritized response generated', {
     questionCount: questions.length,
     responseLength: response.length,
+    prioritizedCriteria: prioritizedCriteria.length,
     reasoning: reasoning.substring(0, 100)
   });
 
   return response;
 }
 
-/**
- * Generate fallback response when GPT-4 is unavailable
- * 
- * @param checklistState - Current checklist state
- * @returns Basic fallback response
- */
-function generateFallbackResponse(checklistState: ChecklistState): string {
-  console.log('🔄 ProcessUserTurn: Using fallback response generation');
 
-  let response = "";
-
-  // Acknowledge what was addressed
-  if (checklistState.last_addressed_item) {
-    const addressedItem = checklistState.config.items.find(item => item.id === checklistState.last_addressed_item);
-    if (addressedItem) {
-      response += `Yoda Says: Great! I can see you've addressed the ${addressedItem.question.toLowerCase()}. That's valuable insight.\n\n`;
-    }
-  }
-
-  // Ask about the next most important item
-  const nextItem = getNextQuestionToAsk(checklistState);
-  if (nextItem) {
-    response += `Yoda Says: To help develop your idea further, I'd like to explore: ${nextItem.question}`;
-    
-    // Add some context prompts
-    const contextPrompts = getContextualPrompts(nextItem.id);
-    if (contextPrompts.length > 0) {
-      response += `\n\n${contextPrompts[Math.floor(Math.random() * contextPrompts.length)]}`;
-    }
-  }
-
-  // Show progress
-  response += `\n\n📊 Progress: ${checklistState.progress}% complete (${checklistState.completed_items.length}/${checklistState.config.items.length} areas covered)`;
-
-  return response;
-}
-
-/**
- * Generate fallback completion response when GPT-4 is unavailable
- * 
- * @param checklistState - Completed checklist state
- * @returns Basic completion message
- */
-function generateFallbackCompletionResponse(checklistState: ChecklistState): string {
-  const completedItemsCount = checklistState.completed_items.length;
-  return `Yoda Says: Excellent! You've covered ${completedItemsCount} key areas of your idea. Your thinking is comprehensive and well-structured.
-
-Based on our discussion, you have a solid foundation for your idea. Georgia is great!
-
-Would you like me to generate a summary of everything we've discussed? Just let me know when you're ready to move to the summary stage.`;
-}
 
 /**
  * Get the next question to ask based on checklist state
@@ -816,4 +809,96 @@ function validateUserMessage(message: ChatMessage): boolean {
   }
 
   return true;
+}
+
+/**
+ * Handle intelligent partial answer follow-up probing
+ * Implements "probe once more, then move on" principle
+ * 
+ * @param state - Current application state
+ * @param userMessage - The user's message
+ * @param checklistState - Current checklist state with partial items
+ * @returns Follow-up response or null if no follow-up needed
+ */
+async function handlePartialAnswerFollowup(
+  state: AppState,
+  userMessage: ChatMessage,
+  checklistState: ChecklistState
+): Promise<string | null> {
+  console.log('🎯 ProcessUserTurn: Checking for partial answer follow-up opportunities');
+
+  // Find the highest priority partial item that hasn't been followed up on yet
+  const prioritizedPartialItems = checklistState.partial_items
+    .map(itemId => checklistState.config.items.find(item => item.id === itemId))
+    .filter(item => item !== undefined)
+    .filter(item => (checklistState.criterion_followups[item!.id] || 0) === 0) // Only items with 0 follow-ups
+    .sort((a, b) => b!.priority - a!.priority); // Sort by priority
+
+  if (prioritizedPartialItems.length === 0) {
+    console.log('📝 ProcessUserTurn: No partial items eligible for follow-up');
+    return null;
+  }
+
+  const itemToFollowUp = prioritizedPartialItems[0]!;
+  
+  console.log('🔍 ProcessUserTurn: Generating follow-up for partial item', {
+    itemId: itemToFollowUp.id,
+    itemQuestion: itemToFollowUp.question,
+    priority: itemToFollowUp.priority,
+    previousAttempts: checklistState.criterion_followups[itemToFollowUp.id] || 0
+  });
+
+  try {
+    const openaiService = createOpenAIService();
+    
+    const followupResult = await openaiService.generatePartialAnswerFollowup({
+      userResponse: userMessage.content,
+      criterionId: itemToFollowUp.id,
+      criterionQuestion: itemToFollowUp.question,
+      previousAttempts: checklistState.criterion_followups[itemToFollowUp.id] || 0,
+      conversationContext: state.messages.map(m => m.content),
+      operationId: `partial_followup_${itemToFollowUp.id}_${Date.now()}`
+    });
+
+    if (!followupResult.success || !followupResult.data) {
+      console.log('⚠️ ProcessUserTurn: Follow-up generation failed, skipping');
+      return null;
+    }
+
+    const { followupQuestion, shouldContinueProbing, reasoning } = followupResult.data;
+
+    console.log('🎯 ProcessUserTurn: Follow-up analysis completed', {
+      itemId: itemToFollowUp.id,
+      shouldContinueProbing,
+      reasoning: reasoning.substring(0, 100)
+    });
+
+    if (shouldContinueProbing) {
+      // Increment follow-up count for this criterion
+      checklistState.criterion_followups[itemToFollowUp.id] = (checklistState.criterion_followups[itemToFollowUp.id] || 0) + 1;
+      checklistState.last_probed_item = itemToFollowUp.id;
+      
+      return followupQuestion;
+    }
+
+    // If GPT-4 says not to probe, remove from partial items and move on
+    checklistState.partial_items = checklistState.partial_items.filter(id => id !== itemToFollowUp.id);
+    console.log('✅ ProcessUserTurn: Moving on from partial item', { itemId: itemToFollowUp.id });
+    
+    return null; // No follow-up, proceed with normal question generation
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.log('❌ ProcessUserTurn: Error in follow-up generation', {
+      itemId: itemToFollowUp.id,
+      error: errorMessage
+    });
+    
+    logger.warn('Error generating partial answer follow-up', {
+      itemId: itemToFollowUp.id,
+      error: errorMessage
+    });
+
+    return null; // Fall back to normal question generation
+  }
 } 

@@ -211,9 +211,11 @@ Object.defineProperty(window, 'MediaRecorder', {
 });
 
 /**
- * Mock fetch for API testing
+ * Polyfill fetch for Node.js testing environment
+ * Uses undici for real HTTP requests in tests
  */
-global.fetch = vi.fn();
+import { fetch } from 'undici';
+global.fetch = fetch as any;
 
 /**
  * Mock environment variables

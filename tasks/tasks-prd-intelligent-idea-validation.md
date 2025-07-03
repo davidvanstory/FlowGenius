@@ -25,9 +25,9 @@
   - [x] 1.4 Implement dynamic GPT-4 generated checklist system replacing hardcoded DEFAULT_BRAINSTORM_CHECKLIST with intelligent, idea-specific criteria generation
   - [x] 1.5 Replace existing keyword-based `analyzeUserResponse()` function with GPT-4 API call to intelligently analyze which checklist items are addressed in user transcriptions
   - [x] 1.6 Replace hardcoded `generateChecklistBasedResponse()` function with GPT-4 API call for dynamic, context-aware question generation
-  - [x] 1.7 Implement conversation context memory system that passes last 10-20 transcriptions to GPT-4 for context-aware analysis and questioning
-  - [ ] 1.8 Add GPT-4 powered question prioritization that limits responses to 2-3 most important questions per interaction
-  - [ ] 1.9 Implement GPT-4 partial answer detection with intelligent follow-up probing (probe once more, then move on if incomplete)
+  - [x] 1.7 Implement conversation context memory system that passes full 128k token context
+  - [x] 1.8 Add GPT-4 powered question prioritization that limits responses to 2-3 most important questions per interaction
+  - [x] 1.9 Implement GPT-4 partial answer detection with intelligent follow-up probing (probe once more, then move on if incomplete)
   - [ ] 1.10 Add GPT-4 powered completion detection and personalized congratulatory messaging when all checklist criteria are satisfied
   
 - [ ] 2.0 Add Progress Indicator to Chat Interface

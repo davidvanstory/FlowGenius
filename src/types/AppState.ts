@@ -70,12 +70,18 @@ export interface ChecklistState {
   active_items: string[];
   /** Number of follow-up questions asked for current item */
   followup_count: number;
+  /** Per-criterion follow-up tracking for intelligent probing */
+  criterion_followups: Record<string, number>;
+  /** Criteria that have partial answers and need follow-up */
+  partial_items: string[];
   /** Whether the checklist is complete */
   is_complete: boolean;
   /** Progress percentage (0-100) */
   progress: number;
   /** Last item that was addressed */
   last_addressed_item?: string;
+  /** Last item that received a follow-up probe */
+  last_probed_item?: string;
 }
 
 /**

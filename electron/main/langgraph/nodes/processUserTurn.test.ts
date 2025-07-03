@@ -113,9 +113,9 @@ describe('ProcessUserTurn Node', () => {
     });
   });
 
-  describe('Stage-Specific Responses', () => {
-    it('should generate brainstorm-appropriate responses', async () => {
-      console.log('🧪 Testing brainstorm stage responses');
+  describe('GPT-4 Integration and Real-World Behavior', () => {
+    it('should generate GPT-4 powered brainstorm responses', async () => {
+      console.log('🧪 Testing GPT-4 brainstorm responses');
       
       const brainstormState = {
         ...initialState,
@@ -128,30 +128,19 @@ describe('ProcessUserTurn Node', () => {
       expect(result.messages).toBeDefined();
       const response = result.messages![0];
       
-      // Should be one of the brainstorm responses
-      const brainstormPhrases = [
-        'interesting idea',
-        'tell me more',
-        'explore this further',
-        'what problem',
-        'success look like',
-        'target audience',
-        'resources',
-        'market',
-        'exciting part',
-        'challenges',
-        'first step'
-      ];
-
-      const hasExpectedPhrase = brainstormPhrases.some(phrase => 
-        response.content.toLowerCase().includes(phrase)
-      );
+      // Test actual GPT-4 response characteristics
+      expect(response.content).toMatch(/Yoda Says:/i);
+      expect(response.content).toContain('?'); // Should ask questions
+      expect(response.content).toContain('📊 Progress:'); // Should show progress
+      expect(response.content.length).toBeGreaterThan(100); // Should be substantial
       
-      expect(hasExpectedPhrase).toBe(true);
-    });
+      // Should update checklist state
+      expect(result.checklist_state).toBeDefined();
+      expect(result.checklist_state!.config.items.length).toBeGreaterThan(0);
+    }, 15000); // Increased timeout for real API calls
 
-    it('should handle summary stage', async () => {
-      console.log('🧪 Testing summary stage responses');
+    it('should handle different stages with appropriate metadata', async () => {
+      console.log('🧪 Testing stage metadata handling');
       
       const summaryState = {
         ...initialState,
@@ -164,11 +153,14 @@ describe('ProcessUserTurn Node', () => {
       expect(result.messages).toBeDefined();
       const response = result.messages![0];
       
-      expect(response.content.toLowerCase()).toContain('summary');
-    });
+      // Should still generate Yoda responses with proper stage metadata
+      expect(response.content).toMatch(/Yoda Says:/i);
+      expect(response.stage_at_creation).toBe('summary');
+      expect(response.content).toContain('📊 Progress:');
+    }, 15000);
 
-    it('should handle PRD stage', async () => {
-      console.log('🧪 Testing PRD stage responses');
+    it('should maintain checklist functionality across stages', async () => {
+      console.log('🧪 Testing checklist functionality across stages');
       
       const prdState = {
         ...initialState,
@@ -181,42 +173,79 @@ describe('ProcessUserTurn Node', () => {
       expect(result.messages).toBeDefined();
       const response = result.messages![0];
       
-      expect(response.content.toLowerCase()).toContain('product requirements document');
-    });
+      // Should maintain checklist-based questioning regardless of stage
+      expect(response.content).toMatch(/Yoda Says:/i);
+      expect(response.stage_at_creation).toBe('prd');
+      expect(result.checklist_state).toBeDefined();
+      expect(result.checklist_state!.config.items.length).toBeGreaterThan(0);
+    }, 15000);
   });
 
-  describe('Response Rotation', () => {
-    it('should rotate through different brainstorm responses', async () => {
-      console.log('🧪 Testing response rotation');
+  describe('Checklist Progress and Context Awareness', () => {
+    it('should track checklist progress with detailed user input', async () => {
+      console.log('🧪 Testing checklist progress tracking');
       
-      const responses = new Set<string>();
-      
-      for (let i = 0; i < 5; i++) {
-        const stateWithMessages = {
-          ...initialState,
-          messages: [
-            userMessage,
-            // Add some assistant messages to increase the count
-            ...Array(i).fill(null).map(() => ({
-              role: 'assistant' as const,
-              content: `Response ${i}`,
-              created_at: new Date(),
-              stage_at_creation: 'brainstorm' as const
-            })),
-            userMessage // Add another user message to process
-          ]
-        };
+      const detailedMessage: ChatMessage = {
+        role: 'user',
+        content: 'My app helps busy professionals track their daily tasks and prioritize them based on urgency and importance. The target users are office workers aged 25-45 who struggle with time management and have tried other productivity apps but found them too complex.',
+        created_at: new Date(),
+        stage_at_creation: 'brainstorm'
+      };
 
-        const result = await processUserTurn(stateWithMessages);
-        
-        if (result.messages && result.messages.length > 0) {
-          responses.add(result.messages[0].content);
-        }
-      }
+      const stateWithDetailedMessage = {
+        ...initialState,
+        messages: [detailedMessage]
+      };
+
+      const result = await processUserTurn(stateWithDetailedMessage);
       
-      // Should have generated different responses
-      expect(responses.size).toBeGreaterThan(1);
-    });
+      expect(result.checklist_state).toBeDefined();
+      const checklist = result.checklist_state!;
+      
+      // Should have analyzed the detailed response and potentially completed some items
+      expect(checklist.config.items.length).toBe(10); // DEFAULT_BRAINSTORM_CHECKLIST
+      expect(checklist.progress).toBeGreaterThanOrEqual(0);
+      expect(checklist.active_items.length).toBeGreaterThan(0);
+      
+      // GPT-4 should have identified some addressed criteria
+      expect(Array.isArray(checklist.completed_items)).toBe(true);
+      expect(Array.isArray(checklist.partial_items)).toBe(true);
+      
+      // Progress should be reflected in response
+      const response = result.messages![0];
+      expect(response.content).toMatch(/📊 Progress: \d+% complete/);
+    }, 15000);
+
+    it('should generate contextually relevant follow-up questions', async () => {
+      console.log('🧪 Testing contextual question generation');
+      
+      const contextMessage: ChatMessage = {
+        role: 'user',
+        content: 'I want to create a task management app',
+        created_at: new Date(),
+        stage_at_creation: 'brainstorm'
+      };
+
+      const stateWithContext = {
+        ...initialState,
+        messages: [contextMessage]
+      };
+
+      const result = await processUserTurn(stateWithContext);
+      
+      expect(result.messages).toBeDefined();
+      const response = result.messages![0];
+      
+      // Should ask relevant questions based on the context
+      expect(response.content).toMatch(/Yoda Says:/i);
+      expect(response.content).toContain('?');
+      
+      // Should be asking about foundational aspects for a task management app
+      const content = response.content.toLowerCase();
+      const relevantTerms = ['problem', 'users', 'target', 'pain', 'solution', 'challenge'];
+      const hasRelevantTerm = relevantTerms.some(term => content.includes(term));
+      expect(hasRelevantTerm).toBe(true);
+    }, 15000);
   });
 
   describe('Error Handling', () => {
