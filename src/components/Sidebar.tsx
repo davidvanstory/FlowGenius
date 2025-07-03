@@ -16,10 +16,6 @@ import { logger } from '../utils/logger';
 export interface SidebarProps {
   /** Current application state */
   currentAppState: AppState;
-  /** Whether the sidebar is open (for mobile responsive design) */
-  isOpen: boolean;
-  /** Function to toggle sidebar visibility */
-  onToggle: () => void;
   /** Function to create a new session */
   onCreateNewSession: () => void;
   /** Function to switch to a different session */
@@ -98,17 +94,7 @@ const SessionItem = ({
     }).format(new Date(session.created_at));
   }, [session.created_at]);
 
-  /**
-   * Get stage color for visual indication
-   */
-  const stageColor = useMemo(() => {
-    const colors: Record<WorkflowStage, string> = {
-      brainstorm: 'bg-blue-500/20 text-blue-400',
-      summary: 'bg-yellow-500/20 text-yellow-400',
-      prd: 'bg-green-500/20 text-green-400',
-    };
-    return colors[session.current_stage] || 'bg-gray-500/20 text-gray-400';
-  }, [session.current_stage]);
+
 
   return (
     <div
@@ -208,10 +194,7 @@ const SessionItem = ({
       </div>
 
       {/* Session Metadata */}
-      <div className="flex items-center justify-between text-xs">
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${stageColor}`}>
-          {session.current_stage}
-        </span>
+      <div className="flex justify-end text-xs">
         <span className="text-gray-400">{formattedDate}</span>
       </div>
     </div>
@@ -223,8 +206,6 @@ const SessionItem = ({
  */
 export const Sidebar = ({
   currentAppState,
-  isOpen,
-  onToggle,
   onCreateNewSession,
   onSessionSwitch,
   sessions,
@@ -235,15 +216,14 @@ export const Sidebar = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   /**
-   * Filter sessions based on search query
+   * Filter sessions based on search query (title only)
    */
   const filteredSessions = useMemo(() => {
     if (!searchQuery.trim()) return sessions;
     
     const query = searchQuery.toLowerCase();
     return sessions.filter(session => 
-      session.title.toLowerCase().includes(query) ||
-      session.current_stage.toLowerCase().includes(query)
+      session.title.toLowerCase().includes(query)
     );
   }, [sessions, searchQuery]);
 
@@ -283,28 +263,14 @@ export const Sidebar = ({
 
   return (
     <aside
-      className={`
-        flex flex-col h-full w-80 bg-gray-900 border-r border-gray-700 transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:static lg:w-80
-        fixed top-0 left-0 z-50 lg:z-auto
-      `}
+      className="flex flex-col h-full w-80 bg-gray-900 border-r border-gray-700 static"
       aria-label="Session management sidebar"
     >
       {/* Sidebar Header */}
       <div className="flex flex-col p-4 border-b border-gray-700">
-        {/* Logo and Close Button */}
-        <div className="flex items-center justify-between mb-4">
+        {/* Logo */}
+        <div className="flex items-center mb-4">
           <h1 className="text-xl font-bold text-white">FlowGenius</h1>
-          <button
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            onClick={onToggle}
-            aria-label="Close sidebar"
-          >
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
 
         {/* New Session Button */}

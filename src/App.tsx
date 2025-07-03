@@ -65,8 +65,7 @@ function AppInner() {
   const { createNewSession, currentSession, isLoading: isSessionLoading } = useSessionManagement();
   const { completeStage, isLoading: isCompletingStage } = useStageManagement();
 
-  // UI state for sidebar visibility (responsive design)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
   
   // Input state for the message input bar
   const [inputValue, setInputValue] = useState('');
@@ -163,13 +162,7 @@ function AppInner() {
     setInputValue(value);
   }, []);
 
-  /**
-   * Toggles the sidebar visibility for responsive design
-   */
-  const toggleSidebar = useCallback(() => {
-    logger.debug('🔄 Toggling sidebar visibility', { currentState: isSidebarOpen });
-    setIsSidebarOpen(prev => !prev);
-  }, [isSidebarOpen]);
+
 
   /**
    * Handles sending a message through the LangGraph workflow
@@ -363,27 +356,13 @@ function AppInner() {
 
   return (
     <div className="app-container">
-      {/* Mobile header with hamburger menu */}
-      <div className="mobile-header">
-        <button 
-          className="hamburger-button"
-          onClick={toggleSidebar}
-          aria-label="Toggle sidebar"
-        >
-          <span className="hamburger-line"></span>
-          <span className="hamburger-line"></span>
-          <span className="hamburger-line"></span>
-        </button>
-        <h1 className="mobile-title">FlowGenius</h1>
-      </div>
+
 
       {/* Main layout container */}
       <div className="main-layout">
         {/* Sidebar Component */}
         <Sidebar
           currentAppState={appState}
-          isOpen={isSidebarOpen}
-          onToggle={toggleSidebar}
           onCreateNewSession={handleCreateNewSession}
           onSessionSwitch={handleSessionSwitch}
           sessions={sessions}
