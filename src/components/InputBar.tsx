@@ -30,12 +30,20 @@ interface InputBarProps {
   onVoiceRecord?: () => void;
   /** Callback when file upload is requested */
   onFileUpload?: () => void;
+  /** Callback when generate summary is requested */
+  onGenerateSummary?: () => void;
   /** Whether the application is currently processing */
   isProcessing?: boolean;
   /** Whether voice recording is available */
   isVoiceEnabled?: boolean;
   /** Whether file upload is available */
   isUploadEnabled?: boolean;
+  /** Whether generate summary is available */
+  isSummaryEnabled?: boolean;
+  /** Current workflow stage */
+  currentStage?: string;
+  /** Whether there are messages to summarize */
+  hasMessages?: boolean;
   /** Placeholder text for the input field */
   placeholder?: string;
   /** Maximum character limit */
@@ -53,9 +61,13 @@ export const InputBar: React.FC<InputBarProps> = ({
   onSend,
   onVoiceRecord,
   onFileUpload,
+  onGenerateSummary,
   isProcessing = false,
   isVoiceEnabled = false,
   isUploadEnabled = false,
+  isSummaryEnabled = false,
+  currentStage = 'brainstorm',
+  hasMessages = false,
   placeholder = "Message Deep Thinker...",
   maxLength = 4000,
   disabled = false,
@@ -195,6 +207,25 @@ export const InputBar: React.FC<InputBarProps> = ({
   }, [isUploadEnabled, isProcessing, disabled, onFileUpload]);
 
   /**
+   * Handle generate summary
+   */
+  const handleGenerateSummary = useCallback(() => {
+    if (!isSummaryEnabled || isProcessing || disabled || currentStage !== 'brainstorm' || !hasMessages) {
+      logger.debug('🚫 Generate summary blocked', { 
+        isSummaryEnabled, 
+        isProcessing, 
+        disabled,
+        currentStage,
+        hasMessages
+      });
+      return;
+    }
+
+    logger.info('📄 Generate summary requested');
+    onGenerateSummary?.();
+  }, [isSummaryEnabled, isProcessing, disabled, currentStage, hasMessages, onGenerateSummary]);
+
+  /**
    * Auto-resize textarea when value changes
    */
   useEffect(() => {
@@ -220,7 +251,10 @@ export const InputBar: React.FC<InputBarProps> = ({
     isProcessing,
     isFocused,
     isVoiceEnabled,
-    isUploadEnabled
+    isUploadEnabled,
+    isSummaryEnabled,
+    currentStage,
+    hasMessages
   });
 
   return (
@@ -267,6 +301,23 @@ export const InputBar: React.FC<InputBarProps> = ({
             aria-label="Message input"
           />
         </div>
+
+        {/* Generate Summary button (only in brainstorm stage with messages) */}
+        {currentStage === 'brainstorm' && hasMessages && (
+          <button
+            type="button"
+            onClick={handleGenerateSummary}
+            disabled={!isSummaryEnabled || isProcessing || disabled}
+            className={`
+              input-action-button summary-button
+              ${(isSummaryEnabled && hasMessages && currentStage === 'brainstorm' && !isProcessing) ? 'enabled' : 'disabled'}
+            `}
+            aria-label="Generate summary"
+            title="Generate summary of this brainstorming session"
+          >
+            📄
+          </button>
+        )}
 
         {/* Voice recording button */}
         <button

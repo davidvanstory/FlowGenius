@@ -41,3 +41,14 @@
   - [x] 3.2 Improve chat background colors in components.css
   - [x] 3.3 Update gray text colors to meet accessibility standards
   - [x] 3.4 Reduce the size of the text input field to be half the size and make the text input section white for consistency with the rest of the "new Conversation" panel 
+
+- [x] 4.0 Move the generate summary button to appear in the text input field section of the application, instead of randomly in the bottom right corner. make it fit nicely and well integrated with the other buttons
+
+- [x] 5.0 Add loading state for summary generation to indicate processing is happening
+  - [x] 5.1 Enhanced TypingIndicator component to show context-specific messages based on workflow stage
+  - [x] 5.2 Added specific "Generating Summary" indicator with visual badge when summary is being processed
+  - [x] 5.3 Added isGeneratingSummary state tracking in App.tsx to monitor summary generation progress
+  - [x] 5.4 Enhanced CSS animations for summary generation loading state with pulse and bounce effects
+  - [x] 5.5 Added appropriate loading icons for different workflow stages (💭 for brainstorm, 📄 for summary, 📝 for PRD)
+  - [x] 5.6 Added "This may take a few moments..." message for summary generation to set user expectations
+

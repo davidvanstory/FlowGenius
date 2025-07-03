@@ -139,8 +139,12 @@ export function useAudioRecording(
   const startRecording = useCallback(async () => {
     logger.info('🎤 Start recording requested');
     
-    // Clear any previous errors
-    setState(prev => ({ ...prev, errorMessage: null }));
+    // Clear any previous errors and reset stop signal
+    setState(prev => ({ 
+      ...prev, 
+      errorMessage: null, 
+      stopSignal: 0 // Reset stop signal for new recording
+    }));
     
     // Check if we have permission
     const hasPermission = await checkPermission();
@@ -150,14 +154,16 @@ export function useAudioRecording(
       setState(prev => ({ 
         ...prev, 
         isPermissionDialogOpen: true,
-        showTroubleshooting: false 
+        showTroubleshooting: false,
+        stopSignal: 0 // Ensure stop signal is reset
       }));
     } else {
       logger.info('✅ Permission already granted, starting recording immediately');
       setState(prev => ({ 
         ...prev, 
         hasPermission: true,
-        recordingState: RecordingState.RECORDING // Skip intermediate state, go directly to recording
+        recordingState: RecordingState.RECORDING, // Skip intermediate state, go directly to recording
+        stopSignal: 0 // Ensure stop signal is reset for immediate recording
       }));
     }
   }, [checkPermission]);
@@ -197,7 +203,8 @@ export function useAudioRecording(
       recordingState: RecordingState.IDLE,
       lastRecording: audioBlob,
       lastRecordingDuration: duration,
-      errorMessage: null
+      errorMessage: null,
+      stopSignal: 0 // Reset stop signal after recording completion to prepare for next recording
     }));
     
     // Call the provided callback
@@ -256,7 +263,8 @@ export function useAudioRecording(
       isPermissionDialogOpen: false,
       errorMessage: null,
       showTroubleshooting: false,
-      recordingState: RecordingState.RECORDING // Start recording immediately after permission granted
+      recordingState: RecordingState.RECORDING, // Start recording immediately after permission granted
+      stopSignal: 0 // Reset stop signal when starting new recording after permission grant
     }));
   }, []);
 

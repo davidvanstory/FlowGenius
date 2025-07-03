@@ -73,6 +73,9 @@ function AppInner() {
   // Processing state for voice transcription
   const [isTranscribing, setIsTranscribing] = useState(false);
 
+  // Processing state for summary generation specifically
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+
   // Mock sessions data - will be replaced with real database data
   const [sessions, setSessions] = useState<IdeaEntity[]>(() => 
     createMockSessions(langGraphState.appState.idea_id)
@@ -245,7 +248,14 @@ function AppInner() {
     }
 
     try {
+      // Set summary generation state
+      setIsGeneratingSummary(true);
+      logger.info('🔄 Summary generation started - UI state updated', { 
+        sessionId: appState.idea_id 
+      });
+
       await completeStage('brainstorm');
+      
       logger.info('✅ Summary generation triggered successfully', { 
         sessionId: appState.idea_id 
       });
@@ -255,8 +265,30 @@ function AppInner() {
         error: errorMessage,
         sessionId: appState.idea_id
       });
+      
+      // Reset summary generation state on error
+      setIsGeneratingSummary(false);
     }
   }, [completeStage, appState.current_stage, appState.messages.length, appState.idea_id]);
+
+  /**
+   * Monitor LangGraph execution to reset summary generation state
+   */
+  useEffect(() => {
+    // Reset summary generation state when execution completes
+    if (!langGraphState.isExecuting && isGeneratingSummary) {
+      const timeoutId = setTimeout(() => {
+        setIsGeneratingSummary(false);
+        logger.info('✅ Summary generation completed - UI state reset', { 
+          sessionId: appState.idea_id,
+          currentStage: appState.current_stage
+        });
+      }, 500); // Small delay to ensure the summary message appears before hiding the indicator
+
+      return () => clearTimeout(timeoutId);
+    }
+    return undefined;
+  }, [langGraphState.isExecuting, isGeneratingSummary, appState.idea_id, appState.current_stage]);
 
   /**
    * Creates a new session using LangGraph
@@ -398,12 +430,12 @@ function AppInner() {
               messages={appState.messages}
               currentStage={appState.current_stage}
               isProcessing={isProcessing}
+              isGeneratingSummary={isGeneratingSummary}
               autoScroll={true}
               onMessageAction={(action, messageIndex) => {
                 logger.info('🎯 Chat message action triggered', { action, messageIndex });
                 // TODO: Implement message actions (copy, regenerate, etc.)
               }}
-              onGenerateSummary={handleGenerateSummary}
             />
           </div>
 
@@ -415,9 +447,13 @@ function AppInner() {
               onSend={handleSendMessage}
               onVoiceRecord={handleVoiceRecord}
               onFileUpload={handleFileUpload}
+              onGenerateSummary={handleGenerateSummary}
               isProcessing={isProcessing}
               isVoiceEnabled={true}
               isUploadEnabled={true} // For future implementation
+              isSummaryEnabled={true}
+              currentStage={appState.current_stage}
+              hasMessages={appState.messages.length > 0}
               placeholder="Message Deep Thinker..."
               disabled={isProcessing}
             />

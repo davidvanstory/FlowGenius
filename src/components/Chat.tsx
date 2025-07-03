@@ -19,6 +19,8 @@ export interface ChatProps {
   currentStage: WorkflowStage;
   /** Whether the AI is currently processing/typing */
   isProcessing?: boolean;
+  /** Whether the AI is specifically generating a summary */
+  isGeneratingSummary?: boolean;
   /** Whether to auto-scroll to bottom on new messages */
   autoScroll?: boolean;
   /** Custom welcome message component */
@@ -27,8 +29,6 @@ export interface ChatProps {
   onScrollChange?: (isAtBottom: boolean) => void;
   /** Custom message actions (copy, regenerate, etc.) */
   onMessageAction?: (action: string, messageIndex: number) => void;
-  /** Callback when generate summary is requested */
-  onGenerateSummary?: () => void;
 }
 
 /**
@@ -210,35 +210,100 @@ const Message = ({ message, index, onAction }: MessageProps) => {
 };
 
 /**
- * Typing indicator component for when AI is processing
+ * Enhanced typing indicator component that shows different messages based on context
  */
-const TypingIndicator = () => (
-  <div className="flex gap-4 px-4 py-6 bg-gray-50">
-    <div className="flex-shrink-0">
-      <div className="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center text-sm font-semibold">
-        AI
+const TypingIndicator = ({ currentStage, isGeneratingSummary }: { 
+  currentStage: WorkflowStage; 
+  isGeneratingSummary?: boolean; 
+}) => {
+  /**
+   * Get appropriate loading message based on context
+   */
+  const loadingMessage = useMemo(() => {
+    logger.debug('🔄 TypingIndicator: Determining loading message', { 
+      currentStage, 
+      isGeneratingSummary 
+    });
+
+    if (isGeneratingSummary) {
+      return 'analyzing conversation and generating summary...';
+    }
+
+    switch (currentStage) {
+      case 'brainstorm':
+        return 'thinking about your idea...';
+      case 'summary':
+        return 'processing your request...';
+      case 'prd':
+        return 'creating product requirements...';
+      default:
+        return 'processing your request...';
+    }
+  }, [currentStage, isGeneratingSummary]);
+
+  /**
+   * Get appropriate loading icon based on context
+   */
+  const loadingIcon = useMemo(() => {
+    if (isGeneratingSummary) {
+      return '📄'; // Document icon for summary generation
+    }
+
+    switch (currentStage) {
+      case 'brainstorm':
+        return '💭'; // Thought bubble for brainstorming
+      case 'summary':
+        return '📋'; // Clipboard for summary stage
+      case 'prd':
+        return '📝'; // Memo for PRD stage
+      default:
+        return '🤖'; // Robot for generic processing
+    }
+  }, [currentStage, isGeneratingSummary]);
+
+  return (
+    <div className="flex gap-4 px-4 py-6 bg-gray-50">
+      <div className="flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center text-sm font-semibold">
+          AI
+        </div>
+      </div>
+      <div className="flex-1 min-w-0 space-y-3">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="font-medium text-gray-800">Deep Thinker</span>
+          <span className="text-gray-600">{loadingMessage}</span>
+          {isGeneratingSummary && (
+            <span className="text-blue-600 text-xs font-medium px-2 py-1 bg-blue-50 rounded-full border border-blue-200 summary-generation-indicator">
+              Generating Summary
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
+                style={{
+                  animationDelay: `${i * 0.2}s`,
+                  animationDuration: '1.4s',
+                }}
+              />
+            ))}
+          </div>
+          <span className={`text-xl animate-pulse ${isGeneratingSummary ? 'loading-icon-bounce' : ''}`}>
+            {loadingIcon}
+          </span>
+          {isGeneratingSummary && (
+            <span className="text-xs text-gray-500 ml-2">
+              This may take a few moments...
+            </span>
+          )}
+        </div>
       </div>
     </div>
-    <div className="flex-1 min-w-0 space-y-3">
-      <div className="flex items-center gap-2 text-sm">
-        <span className="font-medium text-gray-800">Deep Thinker</span>
-        <span className="text-gray-600">is typing...</span>
-      </div>
-      <div className="flex items-center gap-1">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-            style={{
-              animationDelay: `${i * 0.2}s`,
-              animationDuration: '1.4s',
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 /**
  * Default welcome message component
@@ -270,11 +335,11 @@ export const Chat = ({
   messages,
   currentStage,
   isProcessing = false,
+  isGeneratingSummary = false,
   autoScroll = true,
   welcomeComponent,
   onScrollChange,
   onMessageAction,
-  onGenerateSummary,
 }: ChatProps) => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -345,9 +410,10 @@ export const Chat = ({
       messageCount: messages.length,
       currentStage,
       isProcessing,
+      isGeneratingSummary,
       isAtBottom: isUserAtBottomRef.current,
     });
-  }, [messages.length, currentStage, isProcessing]);
+  }, [messages.length, currentStage, isProcessing, isGeneratingSummary]);
 
   const hasMessages = messages.length > 0;
 
@@ -377,37 +443,19 @@ export const Chat = ({
               />
             ))}
             
-            {/* Typing indicator */}
-            {isProcessing && <TypingIndicator />}
+            {/* Enhanced typing indicator with summary generation context */}
+            {isProcessing && (
+              <TypingIndicator 
+                currentStage={currentStage} 
+                isGeneratingSummary={isGeneratingSummary}
+              />
+            )}
           </div>
         )}
         
         {/* Scroll anchor */}
         <div ref={messagesEndRef} className="h-px" aria-hidden="true" />
       </div>
-
-      {/* Generate Summary Button (when in brainstorm stage with messages) */}
-      {currentStage === 'brainstorm' && hasMessages && onGenerateSummary && (
-        <div className="absolute bottom-4 left-4">
-          <button
-            onClick={onGenerateSummary}
-            disabled={isProcessing}
-            className={`
-              px-4 py-2 bg-emerald-600 text-white rounded-full shadow-lg
-              hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2
-              transition-all duration-200 flex items-center gap-2
-              ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
-            aria-label="Generate summary"
-            title="Generate summary of this brainstorming session"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            {isProcessing ? 'Generating...' : 'Generate Summary'}
-          </button>
-        </div>
-      )}
 
       {/* Scroll to bottom button (when not at bottom) */}
       {hasMessages && !isUserAtBottomRef.current && (
