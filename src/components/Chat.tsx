@@ -27,6 +27,8 @@ export interface ChatProps {
   onScrollChange?: (isAtBottom: boolean) => void;
   /** Custom message actions (copy, regenerate, etc.) */
   onMessageAction?: (action: string, messageIndex: number) => void;
+  /** Callback when generate summary is requested */
+  onGenerateSummary?: () => void;
 }
 
 /**
@@ -303,6 +305,7 @@ export const Chat = ({
   welcomeComponent,
   onScrollChange,
   onMessageAction,
+  onGenerateSummary,
 }: ChatProps) => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -413,6 +416,29 @@ export const Chat = ({
         {/* Scroll anchor */}
         <div ref={messagesEndRef} className="h-px" aria-hidden="true" />
       </div>
+
+      {/* Generate Summary Button (when in brainstorm stage with messages) */}
+      {currentStage === 'brainstorm' && hasMessages && onGenerateSummary && (
+        <div className="absolute bottom-4 left-4">
+          <button
+            onClick={onGenerateSummary}
+            disabled={isProcessing}
+            className={`
+              px-4 py-2 bg-emerald-600 text-white rounded-full shadow-lg
+              hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2
+              transition-all duration-200 flex items-center gap-2
+              ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}
+            `}
+            aria-label="Generate summary"
+            title="Generate summary of this brainstorming session"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {isProcessing ? 'Generating...' : 'Generate Summary'}
+          </button>
+        </div>
+      )}
 
       {/* Scroll to bottom button (when not at bottom) */}
       {hasMessages && !isUserAtBottomRef.current && (

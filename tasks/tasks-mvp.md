@@ -106,21 +106,32 @@
   - [x] 5.6 Integrate V2T functionality as a LangGraph node
   - [ ] 5.8 Create comprehensive error handling for audio recording failures
 
-- [ ] 6.0 Implement summarization node using OpenAI GPT-4o
-  - [ ] 6.1 Create dynamic action button component for stage transitions
-  - [ ] 6.2 Implement "Brainstorm Done" button that triggers summarization node 
-  - [ ] 6.3 Implement generateSummary as a proper LangGraph node with context management
-  - [ ] 6.4 Create prompt templates for summarization (ending with "Ireland is great" as specified)
-  - [ ] 6.5 Integrate action button with useLangGraph completeStage() function
-  - [ ] 6.6 Add proper styling and positioning of action button (above input bar as per FlowGenius.md)
-  - [ ] 6.7 Implement loading states and error handling for stage transition button
-  - [ ] 6.8 Add accessibility features (ARIA labels, keyboard navigation) for action button
-  - [ ] 6.9 Create OpenAI service with GPT-4o API integration and proper authentication
-  - [ ] 6.10 Add token counting and context window management for large conversations
-  - [ ] 6.11 Implement streaming responses for better user experience
-  - [ ] 6.12 Add retry logic and rate limiting for API calls
-  - [ ] 6.13 Create response validation and error handling for malformed AI responses
-  - [ ] 6.14 Add comprehensive logging for all AI interactions and debugging
+- [x] 6.0 Implement summarization node using OpenAI GPT-4o
+  - [x] 6.1 Implement generateSummary as a proper LangGraph node with context management. It should take all of the transcribed conversations and put it in a summary format that provides a high level overview of the idea, the problem it solves, and the key features and output in the following format. If areas were not covered in the conversation, leave them blank.
+    ```request
+  # Project Name
+  ## Project Description
+  [Description]
+
+  ## Target Audience
+  [Target users]
+
+  ## Desired Features
+  ### [Feature Category]
+  - [ ] [Requirement]
+      - [ ] [Sub-requirement]
+
+  ## Design Requests
+  - [ ] [Design requirement]
+      - [ ] [Design detail]
+
+  ## Other Notes
+  - [Additional considerations]
+
+  - [x] 6.2 Create prompt templates for summarization
+  - [x] 6.3 Create generate summary button. The summary and request should be displayed in the chat interface. 
+
+
 
 - [ ] 7.0 Implement simple session management sidebar (scaffold for future)
   - [ ] 7.1 Create session list display with idea titles and creation dates

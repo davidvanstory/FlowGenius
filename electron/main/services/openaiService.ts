@@ -689,6 +689,90 @@ export class OpenAIService {
   }
 
   /**
+   * Generate a comprehensive summary of conversation using GPT-4
+   * 
+   * @param request - Summary generation request
+   * @returns Promise resolving to summary generation result
+   */
+  async generateSummary(request: {
+    conversationHistory: string;
+    systemPrompt: string;
+    userPrompt?: string;
+    model?: string;
+    operationId?: string;
+  }): Promise<OpenAIServiceResult<{ content: string; usage: { total_tokens: number; prompt_tokens: number; completion_tokens: number }; model: string }>> {
+    const operationId = request.operationId || `summary_${Date.now()}`;
+    
+    logger.info('📝 OpenAIService: Starting summary generation', {
+      operationId,
+      conversationLength: request.conversationHistory.length,
+      hasUserPrompt: !!request.userPrompt,
+      model: request.model || this.config.model
+    });
+
+    try {
+      // Build context message for summary generation
+      const contextParts = [
+        'Conversation to Summarize:',
+        request.conversationHistory
+      ];
+
+      if (request.userPrompt) {
+        contextParts.unshift('User\'s Custom Instructions:');
+        contextParts.unshift(request.userPrompt);
+        contextParts.unshift('');
+      }
+
+      const userMessage = contextParts.join('\n\n');
+
+      const gptOptions: GPTRequestOptions = {
+        systemPrompt: request.systemPrompt,
+        userMessage,
+        temperature: 0.3, // Low temperature for consistent, structured output
+        maxTokens: 2500, // Generous token limit for detailed summaries
+        model: request.model || this.config.model
+      };
+
+      const response = await this.callGPT4(gptOptions, operationId);
+      
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to get GPT-4 response');
+      }
+
+      logger.info('✅ OpenAIService: Summary generation completed', {
+        operationId,
+        contentLength: response.data.content.length,
+        tokensUsed: response.data.usage.total_tokens,
+        model: response.data.model
+      });
+
+      return {
+        success: true,
+        data: {
+          content: response.data.content,
+          usage: response.data.usage,
+          model: response.data.model
+        },
+        retryCount: response.retryCount,
+        operationId
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('❌ OpenAIService: Summary generation failed', {
+        operationId,
+        error: errorMessage
+      });
+
+      return {
+        success: false,
+        error: errorMessage,
+        operationId
+      };
+    }
+  }
+
+  /**
    * Generate intelligent follow-up for partial answers using GPT-4
    * 
    * @param request - Partial answer follow-up request

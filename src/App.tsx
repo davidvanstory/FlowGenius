@@ -9,7 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { IdeaEntity } from './types/AppState';
 import { logger } from './utils/logger';
-import { LangGraphProvider, useLangGraph, useSendMessage, useSessionManagement } from './hooks/useLangGraph';
+import { LangGraphProvider, useLangGraph, useSendMessage, useSessionManagement, useStageManagement } from './hooks/useLangGraph';
 import { useAudioRecording } from './hooks/useAudioRecording';
 // WhisperService now handled by LangGraph processVoiceInput node
 import Sidebar from './components/Sidebar';
@@ -63,6 +63,7 @@ function AppInner() {
   const { state: langGraphState, clearError, sendVoiceInput } = useLangGraph();
   const { sendMessage, isLoading: isSendingMessage, error: sendMessageError } = useSendMessage();
   const { createNewSession, currentSession, isLoading: isSessionLoading } = useSessionManagement();
+  const { completeStage, isLoading: isCompletingStage } = useStageManagement();
 
   // UI state for sidebar visibility (responsive design)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -80,7 +81,7 @@ function AppInner() {
 
   // Extract current app state from LangGraph context
   const appState = langGraphState.appState;
-  const isProcessing = langGraphState.isExecuting || isSendingMessage || isTranscribing;
+  const isProcessing = langGraphState.isExecuting || isSendingMessage || isTranscribing || isCompletingStage;
   const currentError = langGraphState.error || sendMessageError;
 
   // Audio recording hook with LangGraph voice integration
@@ -225,6 +226,44 @@ function AppInner() {
     logger.info('📎 File upload requested (not yet implemented)');
     // TODO: Implement file upload functionality
   }, []);
+
+  /**
+   * Handles generate summary request from the Chat component
+   */
+  const handleGenerateSummary = useCallback(async () => {
+    logger.info('📄 Generate summary requested', { 
+      currentStage: appState.current_stage,
+      messageCount: appState.messages.length,
+      sessionId: appState.idea_id
+    });
+
+    if (appState.current_stage !== 'brainstorm') {
+      logger.warn('⚠️ Generate summary requested but not in brainstorm stage', { 
+        currentStage: appState.current_stage 
+      });
+      return;
+    }
+
+    if (appState.messages.length === 0) {
+      logger.warn('⚠️ Generate summary requested but no messages to summarize', { 
+        sessionId: appState.idea_id 
+      });
+      return;
+    }
+
+    try {
+      await completeStage('brainstorm');
+      logger.info('✅ Summary generation triggered successfully', { 
+        sessionId: appState.idea_id 
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('❌ Failed to trigger summary generation', { 
+        error: errorMessage,
+        sessionId: appState.idea_id
+      });
+    }
+  }, [completeStage, appState.current_stage, appState.messages.length, appState.idea_id]);
 
   /**
    * Creates a new session using LangGraph
@@ -385,6 +424,7 @@ function AppInner() {
                 logger.info('🎯 Chat message action triggered', { action, messageIndex });
                 // TODO: Implement message actions (copy, regenerate, etc.)
               }}
+              onGenerateSummary={handleGenerateSummary}
             />
           </div>
 
