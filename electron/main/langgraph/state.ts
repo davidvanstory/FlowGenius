@@ -13,7 +13,7 @@
  */
 
 import { Annotation } from '@langchain/langgraph';
-import { AppState, ChatMessage, WorkflowStage, UserAction, createInitialAppState, VoiceAudioData, VoiceTranscription } from '../../../src/types/AppState';
+import { AppState, ChatMessage, WorkflowStage, UserAction, createInitialAppState, VoiceAudioData, VoiceTranscription, ChecklistState } from '../../../src/types/AppState';
 import { logger } from '../../../src/utils/logger';
 
 /**
@@ -166,6 +166,22 @@ export const AppStateAnnotation = Annotation.Root({
           hasText: !!update.text,
           language: update.language,
           duration: update.duration
+        });
+      }
+      return update ?? existing;
+    },
+    default: () => undefined,
+  }),
+
+  /** Optional: Checklist state for voice-based questioning */
+  checklist_state: Annotation<AppState['checklist_state']>({
+    reducer: (existing: any, update?: any) => {
+      if (update) {
+        console.log('✅ State: Checklist state updated', { 
+          progress: update.progress,
+          completed_items: update.completed_items?.length || 0,
+          active_items: update.active_items?.length || 0,
+          is_complete: update.is_complete
         });
       }
       return update ?? existing;

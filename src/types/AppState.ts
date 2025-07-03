@@ -23,6 +23,62 @@ export interface ChatMessage {
 }
 
 /**
+ * Represents a single checklist item for voice-based questioning
+ */
+export interface ChecklistItem {
+  /** Unique identifier for the checklist item */
+  id: string;
+  /** The question or area to explore */
+  question: string;
+  /** Whether this item has been addressed/completed */
+  completed: boolean;
+  /** The user's response that addresses this item */
+  response?: string;
+  /** Keywords or topics that indicate this item has been addressed */
+  keywords: string[];
+  /** Priority level for this item (1-5, with 5 being highest) */
+  priority: number;
+  /** Timestamp when this item was completed */
+  completed_at?: Date;
+}
+
+/**
+ * Checklist configuration for different stages
+ */
+export interface ChecklistConfig {
+  /** Title of the checklist */
+  title: string;
+  /** Description of the checklist purpose */
+  description: string;
+  /** Array of checklist items */
+  items: ChecklistItem[];
+  /** Minimum number of items that must be completed */
+  min_required: number;
+  /** Maximum number of follow-up questions per item */
+  max_followups: number;
+}
+
+/**
+ * Current checklist state and progress
+ */
+export interface ChecklistState {
+  /** Current checklist configuration */
+  config: ChecklistConfig;
+  /** Items that have been addressed */
+  completed_items: string[];
+  /** Items currently being explored */
+  active_items: string[];
+  /** Number of follow-up questions asked for current item */
+  followup_count: number;
+  /** Whether the checklist is complete */
+  is_complete: boolean;
+  /** Progress percentage (0-100) */
+  progress: number;
+  /** Last item that was addressed */
+  last_addressed_item?: string;
+}
+
+/**
  * User-defined prompts for each stage of the workflow
  */
 export interface UserPrompts {
@@ -141,6 +197,9 @@ export interface AppState {
   
   /** Optional: Voice transcription status and results */
   voice_transcription?: VoiceTranscription;
+  
+  /** Optional: Checklist state for voice-based questioning */
+  checklist_state?: ChecklistState;
 }
 
 /**
@@ -273,4 +332,86 @@ export function validateAppState(state: any): state is AppState {
   );
 
   return isValidBase && isValidVoiceAudio && isValidVoiceTranscription;
-} 
+}
+
+/**
+ * Default checklist configuration for brainstorming stage
+ */
+export const DEFAULT_BRAINSTORM_CHECKLIST: ChecklistConfig = {
+  title: "Brainstorming Deep Dive",
+  description: "Comprehensive exploration of your idea to ensure all key aspects are covered",
+  min_required: 6,
+  max_followups: 2,
+  items: [
+    {
+      id: "problem_definition",
+      question: "What specific problem does your idea solve?",
+      completed: false,
+      keywords: ["problem", "issue", "challenge", "pain point", "solve", "fix"],
+      priority: 5
+    },
+    {
+      id: "target_audience",
+      question: "Who is your target audience or customer?",
+      completed: false,
+      keywords: ["audience", "customer", "user", "target", "who", "demographic"],
+      priority: 5
+    },
+    {
+      id: "value_proposition",
+      question: "What unique value does your idea provide?",
+      completed: false,
+      keywords: ["value", "benefit", "unique", "advantage", "differentiator"],
+      priority: 4
+    },
+    {
+      id: "market_size",
+      question: "How big is the market opportunity?",
+      completed: false,
+      keywords: ["market", "size", "opportunity", "scale", "potential", "revenue"],
+      priority: 4
+    },
+    {
+      id: "competition",
+      question: "Who are your main competitors and how do you differentiate?",
+      completed: false,
+      keywords: ["competitor", "competition", "alternative", "differentiate", "unique"],
+      priority: 4
+    },
+    {
+      id: "resources_needed",
+      question: "What resources, skills, or funding do you need?",
+      completed: false,
+      keywords: ["resources", "funding", "skills", "team", "budget", "investment"],
+      priority: 3
+    },
+    {
+      id: "success_metrics",
+      question: "How will you measure success?",
+      completed: false,
+      keywords: ["success", "metrics", "measure", "KPI", "goals", "objectives"],
+      priority: 3
+    },
+    {
+      id: "timeline",
+      question: "What's your timeline for implementation?",
+      completed: false,
+      keywords: ["timeline", "schedule", "when", "launch", "implementation", "roadmap"],
+      priority: 3
+    },
+    {
+      id: "risks_challenges",
+      question: "What are the biggest risks or challenges?",
+      completed: false,
+      keywords: ["risk", "challenge", "obstacle", "concern", "difficulty", "barrier"],
+      priority: 2
+    },
+    {
+      id: "next_steps",
+      question: "What are your immediate next steps?",
+      completed: false,
+      keywords: ["next steps", "action", "plan", "immediate", "first", "start"],
+      priority: 2
+    }
+  ]
+}; 
