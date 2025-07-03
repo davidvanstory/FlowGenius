@@ -59,7 +59,7 @@ export interface ChecklistConfig {
 }
 
 /**
- * Current checklist state and progress
+ * Current checklist state and progress - supports dynamic GPT-4 generated criteria
  */
 export interface ChecklistState {
   /** Current checklist configuration */
@@ -76,6 +76,34 @@ export interface ChecklistState {
   progress: number;
   /** Last item that was addressed */
   last_addressed_item?: string;
+}
+
+/**
+ * Dynamic checklist state for GPT-4 generated criteria
+ */
+export interface DynamicChecklistState {
+  /** GPT-4 generated criteria tailored to the specific idea */
+  generatedCriteria: ChecklistItem[];
+  /** Criteria that have been addressed by the user */
+  addressedCriteria: string[];
+  /** Criteria still pending exploration */
+  pendingCriteria: string[];
+  /** New criteria suggested by GPT-4 as conversation evolves */
+  suggestedNewCriteria?: ChecklistItem[];
+  /** Recent conversation context for GPT-4 analysis (last 10-20 exchanges) */
+  recentConversation: string[];
+  /** Progress percentage (0-100) */
+  progress: number;
+  /** Whether minimum required criteria have been addressed */
+  is_complete: boolean;
+  /** Minimum number of criteria that must be addressed */
+  min_required: number;
+  /** Maximum number of criteria to generate initially */
+  max_criteria: number;
+  /** When the criteria were initially generated */
+  generated_at?: Date;
+  /** Last time criteria were analyzed by GPT-4 */
+  last_analyzed_at?: Date;
 }
 
 /**
@@ -200,6 +228,9 @@ export interface AppState {
   
   /** Optional: Checklist state for voice-based questioning */
   checklist_state?: ChecklistState;
+  
+  /** Optional: Dynamic GPT-4 generated checklist state */
+  dynamic_checklist_state?: DynamicChecklistState;
 }
 
 /**
@@ -336,82 +367,83 @@ export function validateAppState(state: any): state is AppState {
 
 /**
  * Default checklist configuration for brainstorming stage
+ * Updated to match PRD requirements for comprehensive idea validation
  */
 export const DEFAULT_BRAINSTORM_CHECKLIST: ChecklistConfig = {
-  title: "Brainstorming Deep Dive",
-  description: "Comprehensive exploration of your idea to ensure all key aspects are covered",
-  min_required: 6,
+  title: "Comprehensive Idea Validation",
+  description: "Systematic exploration of your product idea covering all critical aspects for successful development",
+  min_required: 8,
   max_followups: 2,
   items: [
     {
       id: "problem_definition",
-      question: "What specific problem does your idea solve?",
+      question: "What specific problem does your idea solve and what is its scope?",
       completed: false,
-      keywords: ["problem", "issue", "challenge", "pain point", "solve", "fix"],
+      keywords: ["problem", "issue", "challenge", "solve", "fix", "scope", "pain", "frustration"],
       priority: 5
     },
     {
-      id: "target_audience",
-      question: "Who is your target audience or customer?",
+      id: "target_users",
+      question: "Who are your target users and what are their characteristics?",
       completed: false,
-      keywords: ["audience", "customer", "user", "target", "who", "demographic"],
+      keywords: ["users", "target", "audience", "customer", "demographic", "personas", "who"],
       priority: 5
     },
     {
-      id: "value_proposition",
-      question: "What unique value does your idea provide?",
+      id: "user_pain_points",
+      question: "What specific pain points do your target users experience?",
       completed: false,
-      keywords: ["value", "benefit", "unique", "advantage", "differentiator"],
+      keywords: ["pain points", "frustrations", "difficulties", "struggles", "issues", "problems"],
+      priority: 5
+    },
+    {
+      id: "solution_approach",
+      question: "How does your solution approach solve those pain points?",
+      completed: false,
+      keywords: ["solution", "approach", "method", "how", "solve", "address", "tackle"],
+      priority: 5
+    },
+    {
+      id: "key_features",
+      question: "What are the key features and how would you describe each one?",
+      completed: false,
+      keywords: ["features", "functionality", "capabilities", "what", "tools", "functions"],
       priority: 4
     },
     {
-      id: "market_size",
-      question: "How big is the market opportunity?",
+      id: "user_interactions",
+      question: "How will users interact with your product? What's the user flow?",
       completed: false,
-      keywords: ["market", "size", "opportunity", "scale", "potential", "revenue"],
+      keywords: ["interaction", "user flow", "journey", "experience", "navigation", "workflow"],
       priority: 4
     },
     {
-      id: "competition",
-      question: "Who are your main competitors and how do you differentiate?",
+      id: "ui_aspects",
+      question: "What are the key UI aspects and interface elements?",
       completed: false,
-      keywords: ["competitor", "competition", "alternative", "differentiate", "unique"],
+      keywords: ["UI", "interface", "design", "layout", "screens", "elements", "components"],
       priority: 4
     },
     {
-      id: "resources_needed",
-      question: "What resources, skills, or funding do you need?",
+      id: "design_visuals",
+      question: "What style, design, and visual approach will you use?",
       completed: false,
-      keywords: ["resources", "funding", "skills", "team", "budget", "investment"],
+      keywords: ["design", "style", "visual", "look", "feel", "branding", "aesthetic"],
       priority: 3
     },
     {
-      id: "success_metrics",
-      question: "How will you measure success?",
+      id: "competition_analysis",
+      question: "Who are your competitors and how is your idea different from existing approaches?",
       completed: false,
-      keywords: ["success", "metrics", "measure", "KPI", "goals", "objectives"],
+      keywords: ["competitors", "competition", "existing", "different", "unique", "alternative"],
+      priority: 4
+    },
+    {
+      id: "technical_implementation",
+      question: "What tech stack and technical approach will you use for implementation?",
+      completed: false,
+      keywords: ["tech stack", "technology", "implementation", "development", "architecture", "backend", "frontend", "database", "security"],
       priority: 3
-    },
-    {
-      id: "timeline",
-      question: "What's your timeline for implementation?",
-      completed: false,
-      keywords: ["timeline", "schedule", "when", "launch", "implementation", "roadmap"],
-      priority: 3
-    },
-    {
-      id: "risks_challenges",
-      question: "What are the biggest risks or challenges?",
-      completed: false,
-      keywords: ["risk", "challenge", "obstacle", "concern", "difficulty", "barrier"],
-      priority: 2
-    },
-    {
-      id: "next_steps",
-      question: "What are your immediate next steps?",
-      completed: false,
-      keywords: ["next steps", "action", "plan", "immediate", "first", "start"],
-      priority: 2
     }
   ]
 }; 
