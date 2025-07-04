@@ -29,14 +29,47 @@ export const AppStateAnnotation = Annotation.Root({
     default: () => '',
   }),
 
-  /** Array of all chat messages - uses concat to append new messages */
+  /** Array of all chat messages - deduplicates messages when merging */
   messages: Annotation<ChatMessage[]>({
     reducer: (existing: ChatMessage[], update?: ChatMessage[]) => {
       console.log('🔄 State: Merging messages', { 
         existingCount: existing.length, 
         updateCount: update?.length || 0 
       });
-      return existing.concat(update ?? []);
+      
+      if (!update || update.length === 0) {
+        return existing;
+      }
+      
+      // Create a map to track unique messages by content and timestamp
+      const messageMap = new Map<string, ChatMessage>();
+      
+      // Add existing messages to the map
+      existing.forEach(msg => {
+        const key = `${msg.role}_${msg.content}_${msg.created_at?.toISOString() || ''}`;
+        messageMap.set(key, msg);
+      });
+      
+      // Add/update with new messages (this will overwrite duplicates)
+      update.forEach(msg => {
+        const key = `${msg.role}_${msg.content}_${msg.created_at?.toISOString() || ''}`;
+        messageMap.set(key, msg);
+      });
+      
+      // Convert back to array, maintaining chronological order
+      const deduplicatedMessages = Array.from(messageMap.values()).sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return timeA - timeB;
+      });
+      
+      console.log('🔄 State: Messages deduplicated', { 
+        originalCount: existing.length + (update?.length || 0),
+        deduplicatedCount: deduplicatedMessages.length,
+        duplicatesRemoved: (existing.length + (update?.length || 0)) - deduplicatedMessages.length
+      });
+      
+      return deduplicatedMessages;
     },
     default: () => [],
   }),

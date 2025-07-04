@@ -67,14 +67,27 @@ interface UseAudioRecordingReturn extends AudioRecordingState {
 }
 
 /**
+ * Audio recording hook options interface
+ */
+interface UseAudioRecordingOptions {
+  /** Whether to enable automatic playback after recording (default: true) */
+  playbackEnabled?: boolean;
+}
+
+/**
  * Custom hook for audio recording functionality
  * 
  * @param onRecordingComplete - Callback when recording is successfully completed
+ * @param options - Optional configuration for the audio recording behavior
  * @returns Audio recording state and control functions
  */
 export function useAudioRecording(
-  onRecordingComplete?: (audioBlob: Blob, duration: number) => void
+  onRecordingComplete?: (audioBlob: Blob, duration: number) => void,
+  options: UseAudioRecordingOptions = {}
 ): UseAudioRecordingReturn {
+  // Extract options with defaults
+  const { playbackEnabled = true } = options;
+  
   // State management
   const [state, setState] = useState<AudioRecordingState>({
     recordingState: RecordingState.IDLE,
@@ -178,25 +191,30 @@ export function useAudioRecording(
       mimeType: audioBlob.type 
     });
     
-    // Create a URL for the audio blob to enable playback
-    const audioUrl = URL.createObjectURL(audioBlob);
-    logger.info('🔊 Audio playback URL created', { url: audioUrl });
-    
-    // Create an audio element to play the recording
-    const audio = new Audio(audioUrl);
-    audio.volume = 0.7;
-    
-    // Log when audio plays
-    audio.onplay = () => logger.info('▶️ Playing back recorded audio');
-    audio.onended = () => {
-      logger.info('⏹️ Audio playback finished');
-      URL.revokeObjectURL(audioUrl); // Clean up the URL
-    };
-    
-    // Play the audio automatically for testing
-    audio.play().catch(err => {
-      logger.error('❌ Failed to play audio', { error: err.message });
-    });
+    // Only play back the audio if playback is enabled
+    if (playbackEnabled) {
+      // Create a URL for the audio blob to enable playback
+      const audioUrl = URL.createObjectURL(audioBlob);
+      logger.info('🔊 Audio playback URL created', { url: audioUrl });
+      
+      // Create an audio element to play the recording
+      const audio = new Audio(audioUrl);
+      audio.volume = 0.7;
+      
+      // Log when audio plays
+      audio.onplay = () => logger.info('▶️ Playing back recorded audio');
+      audio.onended = () => {
+        logger.info('⏹️ Audio playback finished');
+        URL.revokeObjectURL(audioUrl); // Clean up the URL
+      };
+      
+      // Play the audio automatically for testing
+      audio.play().catch(err => {
+        logger.error('❌ Failed to play audio', { error: err.message });
+      });
+    } else {
+      logger.info('🔇 Audio playback disabled - skipping playback');
+    }
     
     setState(prev => ({
       ...prev,
@@ -209,7 +227,7 @@ export function useAudioRecording(
     
     // Call the provided callback
     onRecordingComplete?.(audioBlob, duration);
-  }, [onRecordingComplete]);
+  }, [onRecordingComplete, playbackEnabled]);
 
   /**
    * Handle recording error

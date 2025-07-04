@@ -87,6 +87,7 @@ function AppInner() {
   const currentError = langGraphState.error || sendMessageError;
 
   // Audio recording hook with LangGraph voice integration
+  // Disable automatic playback of recorded audio
   const audioRecording = useAudioRecording(async (audioBlob, duration) => {
     logger.info('🎤 Audio recording completed, saving to temporary file for LangGraph processing', { 
       blobSize: audioBlob.size, 
@@ -156,7 +157,7 @@ function AppInner() {
     } finally {
       setIsTranscribing(false);
     }
-  });
+  }, { playbackEnabled: false });
 
   /**
    * Handles input value changes
@@ -531,8 +532,8 @@ function AppInner() {
         errorMessage={audioRecording.errorMessage || undefined}
       />
 
-      {/* Error display */}
-      {currentError && (
+      {/* Error display - Disabled per user request */}
+      {/* {currentError && (
         <div className="error-banner">
           <div className="error-content">
             <span className="error-icon">⚠️</span>
@@ -545,7 +546,7 @@ function AppInner() {
             </button>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Debug info in development */}
       {process.env.NODE_ENV === 'development' && (
